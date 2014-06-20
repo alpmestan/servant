@@ -14,7 +14,7 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Servant.Resource, Servant.Service, Servant.Example
+  exposed-modules:     Servant.Resource, Servant.Example
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4 && <5,
