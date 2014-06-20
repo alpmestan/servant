@@ -27,6 +27,9 @@ Here's a complete specification for a 'Person' resource:
 
 provided you have 'addPerson', 'listPersons' and 'deletePerson',
 as described in the documentation for the 'mkResourceAt' function.
+
+See the "Servant.Example" module for a full (but admittedly dumb) example
+of specification.
 -}
 module Servant.Resource where
 
