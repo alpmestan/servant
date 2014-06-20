@@ -1,0 +1,31 @@
+name:                servant
+version:             0.1.0.0
+synopsis:            A library to generate REST-style webservices, handling all the boilerplate for you
+-- description:         
+homepage:            http://github.com/zalora/servant
+license:             BSD3
+license-file:        LICENSE
+author:              Alp Mestanogullari
+maintainer:          alp@zalora.com
+copyright:           2014 Zalora SEA
+category:            Web
+build-type:          Simple
+-- extra-source-files:  
+cabal-version:       >=1.10
+
+library
+  exposed-modules:     Servant.Resource, Servant.Service, Servant.Example
+  -- other-modules:       
+  -- other-extensions:    
+  build-depends:       base >=4 && <5,
+                       transformers >= 0.2,
+                       text >= 1.0,
+                       tagged,
+                       reflection,
+                       scotty,
+                       aeson,
+                       http-types,
+                       -- remove the following later:
+                       containers >= 0.5
+  hs-source-dirs:      src
+  default-language:    Haskell2010
