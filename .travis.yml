@@ -1,0 +1,15 @@
+language: haskell
+
+script:
+  - cabal configure && cabal build
+
+before_install:
+  - cabal update
+
+install:
+  - cabal install --only-dependencies
+  
+notifications:
+  email:
+      - alp@zalora.com
+  irc: "irc.freenode.org#haskell-math"
