@@ -7,8 +7,38 @@
              FlexibleContexts,
              FlexibleInstances,
              ScopedTypeVariables #-}
+{- |
+Module      :  Servant.Operation
+Copyright   :  (c) Zalora SEA 2014
+License     :  BSD3
+Maintainer  :  Alp Mestanogullari <alp@zalora.com>
+Stability   :  experimental
 
-module Servant.Operation where
+An 'Operation' class along with some standard
+and commonly used instances.
+
+Each operation can impose some specific constraints
+on the types underlying a 'Resource', like being able
+to convert to or from /JSON/ the core type that the 
+'Resource' holds. This lets you "pay" only for the
+operations you actually use.
+
+-}
+module Servant.Operation
+  ( -- * The 'Operation' class
+    Operation(..)
+  , -- * Some standard operations
+    Add
+  , addWith
+  , Delete
+  , deleteWith
+  , List
+  , listWith
+  , Update
+  , updateWith
+  , View
+  , viewWith
+  ) where
 
 import Control.Applicative
 import Control.Monad.IO.Class
@@ -22,10 +52,146 @@ import Servant.Resource
 import Servant.Response
 import Web.Scotty.Trans
 
+-- | The 'Operation' class is where we specify anything
+--   specific to an operation we want to support on resources.
+--
+--   Note that everything has been designed with the mindset
+--   of not tying operations to the types they operate on.
+--
+--   If you want to define an 'Add' operation for blog posts that 
+--   handles all the scotty boilerplate of getting the value from json
+--   and returning the appropriate HTTP status depending on whether it
+--   succeeded or failed, etc, you don't want to have to redefine everything
+--   when you'll be adding say /comments/ instead of /blog posts/. 
+--
+--   So an operation is meant to basically be a reusable scotty handler.
+--
+--   All you need to get started is a (generally empty) type that'll just be
+--   some kind of token for your operation.
+--
+--   > data Add
+--
+--   'Resource's have a 'Show' instance that require the operation
+--   types to be somehow convertible to a String. We use
+--   @Data.Reflection@ for this, so we'll quickly write an instance
+--   so that our operation can be listed when we're printing a 'Resource'.
+--
+--   > instance Reifies Add String where
+--   >   reify _ = "Add"
+--
+--   And now, let's officially make 'Add' an actual 'Operation'.
+--
+--   > instance Operation Add where
+--
+--   The first thing we need to do is what constraint we
+--   are putting on:
+--
+--   * the core type manipulated by a 'Resource', the @a@ in @Resource m e c a i r ops@
+--   * the index type manipulated by a 'Resource', the @i@ in @Resource m e c a i r ops@
+--   * the result type of update operations ('Bool', @[Only Int]@ from postgresql-simple, etc) of a 'Resource', the @r@ in @Resource m e c a i r ops@
+--
+--   For our 'Add' handler, we are going to extract the value we're adding
+--   from the JSON body of the request, so we will need a 'FromJSON' constraint
+--   on @a@. We will also rely on 'UpdateResponse' by asking the return type of
+--   the function that will add our value to a database to be "convertible"
+--   to 'UpdateResponse' through a call to 'toResponse'. This all can be summed up in:
+--
+--   >   type DataConstraint Add a i r = (FromJSON a, Response UpdateResponse r)
+--
+--   Next up, we have to describe what the function for actually adding a value
+--   to some kind of database will look like.
+--
+--   >   type Function Add c a i r = c -> a -> IO r
+--
+--   An example of such a function would be:
+--
+--   > addPerson :: PGSQL.Connection -> Person -> IO [Only Int]
+--
+--   And now, the meat of an operation: we have to set up an endpoint
+--   and the corresponding handler (or /action/), by defining 'addHandler' for 'Add',
+--   which in our case should have the following signature.
+--
+--   > addHandler :: (DataConstraint Add a i r, Functor m, MonadIO m, ScottyError e)
+--   >            => Function Add c a i r
+--   >            -> Resource m e c a i r ops
+--   >            -> Resource m e c a i r (Add ': ops)
+--
+--   (We can see that this is where we're actually making operations
+--   pile up in the type-level list.)
+--
+--   If we replace 'DataConstraint' and 'Function' with the types we've
+--   given for 'Add', we get:
+--
+--   > addHandler :: (FromJSON a, Response UpdateResponse r, Functor m, MonadIO m, ScottyError e)
+--   >            => (c -> a -> IO r)
+--   >            -> Resource m e c a i r ops
+--   >            -> Resource m e c a i r (Add ': ops)
+--
+--   Alright, let's go ahead and implement it.
+--
+--   >   addHandler addingFunc resource = 
+--   >     resource { setupAction = setupAction resource >> addAction }
+--   >    
+--   >     where addAction = 
+--   >             post (capture $ resourceRoute resource) $ do
+--   >               val <- jsonData
+--   >               (resp :: UpdateResponse, statuscode)
+--   >                 <- toResponse <$> liftIO (withContext (ctx resource) $ \c -> f c val)
+--   >               status statuscode
+--   >               json resp
+--
+--   If considering our 'Person' example again, this would:
+--
+--   * set up an endpoint reached through HTTP POST requests,
+--     at the path @/persons@ for example.
+--   * when reached, this endpoint would first extract the request body
+--     as JSON and convert this to a 'Person' value.
+--   * it would then setup a 'Context' to use the provided "adding" function with,
+--     and pass it along with the value to the said function, to actually
+--     add the value to the database or whatever backend that context
+--     represents.
+--   * it would then use 'toResponse' from the 'Response' class to convert
+--     the return type of /addingFunc/ to servant's reusable 'UpdateResponse'
+--     response type which already has a JSON instance. Make sure you have such
+--     an instance for the @r@ type of your @Resource m e c a i r ops@.
+--
+--   And now, just add a cute companion combinator:
+--
+--   > addWith :: ( Functor m, MonadIO m, ScottyError e
+--   >            , FromJSON a, Response UpdateResponse r
+--   >            )
+--   >         => (c -> a -> IO r)
+--   >         -> Resource m e c a i r ops
+--   >         -> Resource m e c a i r (Add ': ops)
+--   > addWith f r = addHandler f r
+--
+--   And you are done implementing addition support!
+--
+--   > mkResourceAt "/persons" "personid" withConnection
+--   >   & updateWith personUpdate -- let's suppose it was already there
+--
+--   can be turned into:
+--
+--   > mkResourceAt "/persons" "personid" withConnection
+--   >   & updateWith personUpdate -- let's suppose it was already there
+--   >   & addWith personAdd
 class Operation o where
+  -- | The set of constraints your this operation
+  --   imposes on the core resource type, its index type
+  --   and the return type of "effectful" context update
+  --   functions.
   type DataConstraint o a i r :: Constraint
+
+  -- | What type the /database operations/ (so to speak)
+  --   for this operation should have.
+  --
+  --   For example, if we consider 'Add', it's reasonable to
+  --   expect @c -> a -> IO r@ since we just need a connection
+  --   and a value to add. And we're using @r@ as return type 
+  --   since it's an /effectful/ (so to speak, again) db operation.
   type Function o c a i r :: *
 
+  -- | How should we update the 'Resource's handler
   addHandler :: ( DataConstraint o a i r
                 , Functor m
                 , MonadIO m
@@ -35,6 +201,11 @@ class Operation o where
              -> Resource m e c a i r ops
     			   -> Resource m e c a i r (o ': ops)
 
+-- | A generic 'Add' operation, which
+--   relies on 'UpdateResponse'.
+--
+--   This is just used at the type-level, but is
+--   useful through its 'Reifies' and 'Operation' instances.
 data Add
 
 instance Reifies Add String where
@@ -57,6 +228,11 @@ instance Operation Add where
               status statuscode
               json resp
 
+-- | Handy combinator for adding 'Add' support to
+--   a 'Resource'.
+--
+-- > mkResourceAt "/persons" "personid" withConnection
+-- >   & addWith personAdd
 addWith :: ( Functor m, MonadIO m, ScottyError e
            , FromJSON a, Response UpdateResponse r
            )
@@ -65,7 +241,11 @@ addWith :: ( Functor m, MonadIO m, ScottyError e
         -> Resource m e c a i r (Add ': ops)
 addWith f r = addHandler f r
 
-
+-- | A generic 'Delete' operation, which
+--   relies on 'UpdateResponse'.
+--
+--   This is just used at the type-level, but is
+--   useful through its 'Reifies' and 'Operation' instances.
 data Delete
 
 instance Reifies Delete String where
@@ -88,6 +268,11 @@ instance Operation Delete where
               status statuscode
               json resp
 
+-- | Handy combinator for adding 'Delete' support to
+--   a 'Resource'.
+--
+-- > mkResourceAt "/persons" "personid" withConnection
+-- >   & deleteWith personDelete
 deleteWith :: ( Functor m, MonadIO m, ScottyError e
               , Parsable i, Response UpdateResponse r
               )
@@ -96,6 +281,10 @@ deleteWith :: ( Functor m, MonadIO m, ScottyError e
            -> Resource m e c a i r (Delete ': ops)
 deleteWith r f = addHandler r f
 
+-- | A generic 'List' operation.
+--
+--   This is just used at the type-level, but is
+--   useful through its 'Reifies' and 'Operation' instances.
 data List
 
 instance Reifies List String where
@@ -116,6 +305,11 @@ instance Operation List where
               status status200
               json elems
 
+-- | Handy combinator for adding 'List' support to
+--   a 'Resource'.
+--
+-- > mkResourceAt "/persons" "personid" withConnection
+-- >   & listWith personList
 listWith :: ( Functor m, MonadIO m, ScottyError e
             , ToJSON a
             )
@@ -124,6 +318,11 @@ listWith :: ( Functor m, MonadIO m, ScottyError e
          -> Resource m e c a i r (List ': ops)
 listWith f r = addHandler f r
 
+-- | A generic 'Update' operation, which
+--   relies on 'UpdateResponse'.
+--
+--   This is just used at the type-level, but is
+--   useful through its 'Reifies' and 'Operation' instances.
 data Update
 
 instance Reifies Update String where
@@ -151,6 +350,11 @@ instance Operation Update where
               status statuscode
               json resp
 
+-- | Handy combinator for adding 'Update' support to
+--   a 'Resource'.
+--
+-- > mkResourceAt "/persons" "personid" withConnection
+-- >   & updateWith personUpdate
 updateWith :: ( Functor m, MonadIO m, ScottyError e
               , FromJSON a, Parsable i, Response UpdateResponse r
               )
@@ -159,6 +363,11 @@ updateWith :: ( Functor m, MonadIO m, ScottyError e
            -> Resource m e c a i r (Update ': ops)
 updateWith f r = addHandler f r
 
+-- | A generic 'View' operation, which
+--   relies on 'LookupResponse'.
+--
+--   This is just used at the type-level, but is
+--   useful through its 'Reifies' and 'Operation' instances.
 data View
 
 instance Reifies View String where
@@ -186,6 +395,11 @@ instance Operation View where
               status statuscode
               json resp
 
+-- | Handy combinator for adding 'View' support to
+--   a 'Resource'.
+--
+-- > mkResourceAt "/persons" "personid" withConnection
+-- >   & viewWith personView
 viewWith :: ( Functor m, MonadIO m, ScottyError e
             , Parsable i, ToJSON a
             )

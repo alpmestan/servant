@@ -1,7 +1,19 @@
 {-# LANGUAGE DeriveGeneric,
              OverloadedStrings,
              MultiParamTypeClasses #-}
+{- |
+Module      :  Servant.Response
+Copyright   :  (c) Zalora SEA 2014
+License     :  BSD3
+Maintainer  :  Alp Mestanogullari <alp@zalora.com>
+Stability   :  experimental
 
+This module contains a generic 'Response' class for tying the result
+of some \"database computation\" to some response type of yours,
+or to some of the default ones from this module, namely 'LookupResponse'
+and 'UpdateResponse'.
+
+-}
 module Servant.Response
   ( -- * The 'Response' class
     Response(..)
@@ -60,8 +72,3 @@ instance ToJSON a => ToJSON (LookupResponse a) where
 --   to the client along with what HTTP status.
 class ToJSON resp => Response resp result where
   toResponse :: result -> (resp, Status)
-
-
-
-
-

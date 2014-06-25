@@ -13,9 +13,8 @@ License     :  BSD3
 Maintainer  :  Alp Mestanogullari <alp@zalora.com>
 Stability   :  experimental
 
-An abstraction for 'Resource's that can be added, updated, deleted, 
-viewed and listed, but which can support only some of these operations,
-depending on what the user code needs/wants.
+An abstraction for 'Resource's that can support any number
+of operations, which will be tagged at the type-level.
 
 Here's a complete specification for a 'Person' resource:
 
@@ -26,12 +25,14 @@ Here's a complete specification for a 'Person' resource:
 >     & deleteWith deletePerson
 
 provided you have 'addPerson', 'listPersons' and 'deletePerson',
-as described in the documentation for the 'mkResourceAt' function.
+as described in "Servant.Operation".
 
-See the "Servant.Example" module for a full (but admittedly dumb) example
-of specification.
 -}
-module Servant.Resource where
+module Servant.Resource
+  ( Resource(..)
+  , mkResourceAt
+  , (&)
+  ) where
 
 import Data.Proxy
 import Data.Reflection
@@ -40,6 +41,8 @@ import Web.Scotty.Trans
 
 -- | A 'Resource'.
 --
+-- * the @m@ type parameter is the monad on top of which Scotty will sit
+-- * the @e@ type parameter is the error type used by your scotty monad
 -- * the @c@ type parameter is the context/connection type (think DB connection)
 -- * the @a@ type parameter is the type representing values for the 'Resource'
 -- * the @i@ type parameter is the type by which we will index values of type @a@
@@ -84,7 +87,7 @@ dropHeadOp (Resource route kname act withctx) =
 --
 --   Intended to be used like this:
 --
--- > mkResourceAt "/persons" "personid"
+-- > mkResourceAt "/persons" "personid" withPGConnection
 -- >   -- & addWith addPerson
 -- >   -- & deleteWith deletePerson
 -- >   -- & listWith listPersons
