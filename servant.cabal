@@ -16,6 +16,7 @@ cabal-version:       >=1.10
 library
   exposed-modules:
       Servant.Context
+    , Servant.Operation
     , Servant.Resource
     , Servant.Response
     , Servant.Service
