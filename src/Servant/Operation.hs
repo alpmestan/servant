@@ -27,7 +27,6 @@ class Operation o where
   type Function o c a i r :: *
 
   addHandler :: ( DataConstraint o a i r
-                , Context c
                 , Functor m
                 , MonadIO m
                 , ScottyError e
@@ -54,12 +53,11 @@ instance Operation Add where
             post (capture $ resourceRoute r) $ do
               val <- jsonData
               (resp :: UpdateResponse, statuscode)
-                <- toResponse <$> liftIO (withContext $ \c -> f c val)
+                <- toResponse <$> liftIO (withContext (ctx r) $ \c -> f c val)
               status statuscode
               json resp
 
 addWith :: ( Functor m, MonadIO m, ScottyError e
-           , Context c
            , FromJSON a, Response UpdateResponse r
            )
         => (c -> a -> IO r)
@@ -86,12 +84,12 @@ instance Operation Delete where
             delete (capture $ resourceRoute r ++ "/:" ++ keyName r) $ do
               key <- param (pack $ keyName r)
               (resp :: UpdateResponse, statuscode)
-                <- toResponse <$> liftIO (withContext $ \c -> f c key)
+                <- toResponse <$> liftIO (withContext (ctx r) $ \c -> f c key)
               status statuscode
               json resp
 
 deleteWith :: ( Functor m, MonadIO m, ScottyError e
-              , Context c, Parsable i, Response UpdateResponse r
+              , Parsable i, Response UpdateResponse r
               )
            => (c -> i -> IO r)
            -> Resource m e c a i r ops
@@ -114,12 +112,12 @@ instance Operation List where
 
     where listAction = 
             get (capture $ resourceRoute r) $ do
-              elems <- liftIO (withContext f)
+              elems <- liftIO (withContext (ctx r) f)
               status status200
               json elems
 
 listWith :: ( Functor m, MonadIO m, ScottyError e
-            , Context c, ToJSON a
+            , ToJSON a
             )
          => (c -> IO [a])
          -> Resource m e c a i r ops
@@ -149,12 +147,11 @@ instance Operation Update where
               key <- param (pack $ keyName r)
               newVal <- jsonData
               (resp :: UpdateResponse, statuscode)
-                <- toResponse <$> liftIO (withContext $ \c -> f c key newVal)
+                <- toResponse <$> liftIO (withContext (ctx r) $ \c -> f c key newVal)
               status statuscode
               json resp
 
 updateWith :: ( Functor m, MonadIO m, ScottyError e
-              , Context c
               , FromJSON a, Parsable i, Response UpdateResponse r
               )
            => (c -> i -> a -> IO r)
@@ -182,7 +179,7 @@ instance Operation View where
     where viewAction =
             get (capture $ resourceRoute r ++ "/:" ++ keyName r) $ do
               key <- param (pack $ keyName r)
-              lookupResp <- liftIO (withContext $ \c -> f c key)
+              lookupResp <- liftIO (withContext (ctx r) $ \c -> f c key)
               let (resp, statuscode) = maybe (NotFound, status404)  
                                              (\x -> (Found x, status200)) 
                                              lookupResp
@@ -190,7 +187,7 @@ instance Operation View where
               json resp
 
 viewWith :: ( Functor m, MonadIO m, ScottyError e
-            , Context c, Parsable i, ToJSON a
+            , Parsable i, ToJSON a
             )
          => (c -> i -> IO (Maybe a))
          -> Resource m e c a i r ops
