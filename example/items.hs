@@ -14,10 +14,6 @@ import Network.HTTP.Types.Status
 import System.IO.Unsafe
 import Web.Scotty
 
-import Servant.Context
-import Servant.Resource
-import Servant.Response
-import Servant.Operation
 import Servant.Service
 
 newtype ItemId = ItemId { iId :: Int }
