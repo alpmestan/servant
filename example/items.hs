@@ -1,8 +1,6 @@
-{-# LANGUAGE DeriveGeneric,
+{-# LANGUAGE MultiParamTypeClasses,
              GeneralizedNewtypeDeriving,
-             DataKinds,
-             FlexibleInstances,
-             MultiParamTypeClasses,
+             DeriveGeneric,
              OverloadedStrings #-}
 module Main where
 
@@ -16,9 +14,6 @@ import Network.HTTP.Types.Status
 import System.IO.Unsafe
 import Web.Scotty
 
-import Servant.Context
-import Servant.Resource
-import Servant.Response
 import Servant.Service
 
 newtype ItemId = ItemId { iId :: Int }
@@ -30,46 +25,53 @@ data Item = Item { itemId :: ItemId, itemName :: String }
 instance FromJSON Item where
 instance ToJSON Item where
 
-type Connection = IORef (Map ItemId Item)
+newtype Connection = Connection (IORef (Map ItemId Item))
+
+withConnection :: (Connection -> IO r) -> IO r
+withConnection f = f db
 
 db :: Connection
-db = unsafePerformIO $ newIORef M.empty
+db = Connection . unsafePerformIO $ newIORef M.empty
 {-# NOINLINE db #-}
 
-instance Context Connection where
-  withContext act = act db
-
 itemAdd :: Connection -> Item -> IO Bool
-itemAdd ref item = atomicModifyIORef' ref f
+itemAdd (Connection ref) item = 
+  atomicModifyIORef' ref f
 
   where f m = (M.insert (itemId item) item m, True) 
 
 itemView :: Connection -> ItemId -> IO (Maybe Item)
-itemView ref itemid = M.lookup itemid <$> readIORef ref
+itemView (Connection ref) itemid = M.lookup itemid <$> readIORef ref
 
 itemDelete :: Connection -> ItemId -> IO Bool
-itemDelete ref itemid = atomicModifyIORef' ref f
+itemDelete (Connection ref) itemid = atomicModifyIORef' ref f
 
   where f m = (M.delete itemid m, True)
 
 itemUpdate :: Connection -> ItemId -> Item -> IO Bool
-itemUpdate ref itemid item = atomicModifyIORef' ref f
+itemUpdate (Connection ref) itemid item = atomicModifyIORef' ref f
 
   where f m = (M.insert itemid item m, True)
 
 itemList :: Connection -> IO [Item]
-itemList ref = M.elems <$> readIORef ref
+itemList (Connection ref) = M.elems <$> readIORef ref
 
 instance Response UpdateResponse Bool where
   toResponse False = (UpdateResponse False "Not found", status404)
   toResponse True  = (UpdateResponse True "", status200)
 
-itemResource :: Resource Connection -- resource acquired through an IORef
-                         Item       -- containing 'Item's
-                         ItemId     -- indexed by 'ItemId's
-                         Bool       -- update operations return 'Bool'
-                         ['List, 'View, 'Delete, 'Update, 'Add] -- supported operations
-itemResource = mkResourceAt "/items" "itemid"
+{-
+itemResource :: Resource IO
+                         Text
+                         Connection
+                         Item
+                         ItemId
+                         Bool
+                         '[List, View, Delete, Update, Add]
+
+but this is all infered.
+-}
+itemResource = mkResourceAt "/items" "itemid" (mkContext withConnection)
              & addWith itemAdd
              & updateWith itemUpdate
              & deleteWith itemDelete
@@ -77,7 +79,9 @@ itemResource = mkResourceAt "/items" "itemid"
              & listWith itemList
 
 itemService :: ScottyM ()
-itemService = declareResource itemResource
+itemService = runResource itemResource
 
 main :: IO ()
-main = scotty 3000 itemService 
+main = do
+  print itemResource
+  scotty 3000 itemService

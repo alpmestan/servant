@@ -1,7 +1,53 @@
 name:                servant
 version:             0.1.0.0
 synopsis:            A library to generate REST-style webservices, handling all the boilerplate for you
--- description:         
+description:         
+  An abstraction for 'Resource's that can support any number
+  of operations, which will be tagged at the type-level.
+  .
+  Here's a complete specification for a 'Person' resource:
+  .
+  > personResource = 
+  >   mkResourceAt "/persons" "personid"
+  >     & addWith addPerson
+  >     & listWith listPersons
+  >     & deleteWith deletePerson
+  .
+  provided you have 'addPerson', 'listPersons' and 'deletePerson',
+  as described in "Servant.Operation".
+  .
+  You can then turn this into a (JSON-based) scotty webservice
+  by simply doing:
+  .
+  > personService :: ScottyM ()
+  > personService = runResource personResource
+  >
+  > main :: IO ()
+  > main = do
+  >   print personResource
+  >   scotty 3000 itemService
+  .
+  > $ cabal run
+  > Resource at: /persons
+  >   Indexed by key: personid
+  >   Supports:
+  >     - Add
+  >     - Delete
+  >     - List
+  >
+  > Setting phasers to stun... (port 3000) (ctrl-c to quit)
+  .
+  * "Servant.Resource" contains the abstraction for a Resource
+  * "Servant.Operation" shows you what an operation is, what operations
+    are provided out of the box, and how you can define your owns.
+  * "Servant.Context" contains the abstraction for things like database connections
+    , handles, etc.
+  * "Servant.Response" contains everything related to getting the response of your
+    database or the like transformed into a suitable JSON value
+  * "Servant.Service" contains the function that lets you run a resource: @runResource@
+    and reexports all of the other modules so that you just have to do:
+  .
+  > import Servant.Service
 homepage:            http://github.com/zalora/servant
 license:             BSD3
 license-file:        LICENSE
@@ -10,12 +56,13 @@ maintainer:          alp@zalora.com
 copyright:           2014 Zalora SEA
 category:            Web
 build-type:          Simple
--- extra-source-files:  
+extra-source-files:  example/items.hs
 cabal-version:       >=1.10
 
 library
   exposed-modules:
       Servant.Context
+    , Servant.Operation
     , Servant.Resource
     , Servant.Response
     , Servant.Service
