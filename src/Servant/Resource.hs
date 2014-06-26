@@ -31,12 +31,14 @@ as described in "Servant.Operation".
 module Servant.Resource
   ( Resource(..)
   , mkResourceAt
+  , catchingWith
   , (&)
   ) where
 
 import Data.Proxy
 import Data.Reflection
 import Servant.Context
+import Servant.Error
 import Web.Scotty.Trans
 
 -- | A 'Resource'.
@@ -56,10 +58,15 @@ data Resource (m :: * -> *) e c a i r (ops :: [*]) =
            , setupAction   :: ScottyT e m () -- ^ action to run when setting
                                              --   up the resource's handlers
            , ctx           :: Context c      -- ^ how do we access the context
+           , errCatcher    :: ExceptionCatcher e -- ^ zero or more functions for catching
+                                                 --   any time of exception. each of these
+                                                 --   usually catch their own type of exceptions.
+                                                 --   We only ask them to be convertible to the
+                                                 --   error type used in your scotty application
            }
 
 instance Show (Resource m e c a i r '[]) where
-  show (Resource route kn _ _) 
+  show (Resource route kn _ _ _)
     = "Resource at: " ++ route
     ++ "\n  Indexed by key: " ++ kn
     ++ "\n  Supports:\n"
@@ -76,8 +83,8 @@ instance (Reifies o String, Show (Resource m e c a i r ops))
 --   resource, but dropping the first operation from the list.
 --   It's used when doing recursion in type classe instances.
 dropHeadOp :: Resource m e c a i r (o ': ops) -> Resource m e c a i r ops
-dropHeadOp (Resource route kname act withctx) =
-  Resource route kname act withctx
+dropHeadOp (Resource route kname act withctx cs) =
+  Resource route kname act withctx cs
 
 -- | Create "an empty" 'Resource', i.e one that supports no
 --   operation on it.
@@ -120,7 +127,16 @@ mkResourceAt :: Monad m
              -> Context c -- ^ how do we get our hand on the context (db connection, etc)
              -> Resource m e c a i r '[]
 mkResourceAt pat kname withctx = 
-  Resource pat kname (return ()) withctx
+  Resource pat kname (return ()) withctx noErrorHandling
+
+-- | Add exception catching capability to
+--   the 'Resource' using the given 'ExceptionCatcher'.
+--
+--   See "Servant.Error" for more information about 'ExceptionCatcher'.
+catchingWith :: ExceptionCatcher e
+             -> Resource m e c a i r ops
+             -> Resource m e c a i r ops
+catchingWith c r = r { errCatcher = c }
 
 -- | Reversed function application
 --

@@ -77,6 +77,7 @@ itemResource = mkResourceAt "/items" "itemid" (mkContext withConnection)
              & deleteWith itemDelete
              & viewWith itemView
              & listWith itemList
+             & catchingWith catcher
 
 itemService :: ScottyM ()
 itemService = runResource itemResource

@@ -1,6 +1,6 @@
 name:                servant
 version:             0.1.0.0
-synopsis:            A library to generate REST-style webservices, handling all the boilerplate for you
+synopsis:            A library to generate REST-style webservices on top of scotty, handling all the boilerplate for you
 description:         
   An abstraction for 'Resource's that can support any number
   of operations, which will be tagged at the type-level.
@@ -64,6 +64,7 @@ cabal-version:       >=1.10
 library
   exposed-modules:
       Servant.Context
+    , Servant.Error
     , Servant.Operation
     , Servant.Resource
     , Servant.Response
