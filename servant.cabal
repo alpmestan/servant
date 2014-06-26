@@ -5,16 +5,18 @@ description:
   An abstraction for 'Resource's that can support any number
   of operations, which will be tagged at the type-level.
   .
-  Here's a complete specification for a 'Person' resource:
+  Here's a specification for a 'Person' resource, from which we can generate a scotty webapp:
   .
   > personResource = 
-  >   mkResourceAt "/persons" "personid"
+  >   mkResourceAt "/persons" "personid" withPGConnection
   >     & addWith addPerson
   >     & listWith listPersons
   >     & deleteWith deletePerson
   .
   provided you have 'addPerson', 'listPersons' and 'deletePerson',
-  as described in "Servant.Operation".
+  as described in "Servant.Operation", and withPGConnection should
+  be a function using a connection or connection pool or any kind of such
+  /context/ that you have set up previously.
   .
   You can then turn this into a (JSON-based) scotty webservice
   by simply doing:
