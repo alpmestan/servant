@@ -5,10 +5,11 @@
 module Main where
 
 import Control.Applicative
-import Data.Aeson
+import Data.Aeson hiding (json)
 import Data.IORef
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import Data.Text.Lazy (Text)
 import GHC.Generics
 import Network.HTTP.Types.Status
 import System.IO.Unsafe
@@ -77,12 +78,20 @@ itemResource = mkResourceAt "/items" "itemid" (mkContext withConnection)
              & deleteWith itemDelete
              & viewWith itemView
              & listWith itemList
-             & catchingWith catcher
+--              & catchingWith catcher
 
-itemService :: ScottyM ()
-itemService = runResource itemResource
+
+itemService :: Service Text IO
+itemService =
+  emptyService
+    & resource itemResource
+
+itemHandler :: Text -> ActionM ()
+itemHandler err = do
+  status status400
+  json err
 
 main :: IO ()
 main = do
   print itemResource
-  scotty 3000 itemService
+  scotty 3000 $ runService itemService itemHandler
