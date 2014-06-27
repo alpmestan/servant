@@ -40,7 +40,6 @@ module Servant.Operation
   , viewWith
   ) where
 
-import Control.Applicative
 import Control.Monad.IO.Class
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Reflection
