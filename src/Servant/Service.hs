@@ -13,6 +13,7 @@ Function for running a 'Resource' in 'ScottyT'.
 module Servant.Service
   ( runResource
   , Service
+  , emptyService
   , runService
   , resource
   , module Servant.Context
@@ -42,6 +43,9 @@ runResource r = setupAction r
 
 newtype Service e m =
   Service { service :: ScottyT e m () }
+
+emptyService :: Monad m => Service e m
+emptyService = Service (return ())
 
 resource :: Monad m
          => Resource m e c a i r (o ': ops)
