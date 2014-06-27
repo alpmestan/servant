@@ -53,10 +53,12 @@ description:
     , handles, etc.
   * "Servant.Response" contains everything related to getting the response of your
     database or the like transformed into a suitable JSON value
-  * "Servant.Service" contains the function that lets you run a resource: @runResource@
-    and reexports all of the other modules so that you just have to do:
-  .
-  > import Servant.Service
+  * "Servant.Service" lets you build up a webservice composed of several resources
+    and reexports all the other modules so that you just have to:
+    .
+    > import Servant.Service
+    .
+    to get started with /servant/.
 homepage:            http://github.com/zalora/servant
 license:             BSD3
 license-file:        LICENSE
