@@ -54,16 +54,33 @@ instance ToJSON UpdateResponse where
 --   if it could be found. This is (purposefully) isomorphic to 'Maybe'.
 data LookupResponse a =
     NotFound
-  | Found a
+  | Found !a
   deriving (Eq, Show)
 
+-- | If you have some type convertible to JSON,
+--   you can wrap it in 'LookupResponse' whenever you are
+--   looking up a value associated to some identifier
+--   where the lookup may fail.
+--   It'll send the JSON-encoded value if found or
+--
+-- > { "message" : "Not found" }
+--
+--   if not found.
 instance ToJSON a => ToJSON (LookupResponse a) where
   toJSON NotFound  = object [ "message" .= ("Not found" :: Text) ]
   toJSON (Found x) = toJSON x
 
 -- | A class that ties return types of your database operations
 --   and the output format that will be used to communicate
---   the result. If you're adding an item, and if you're using
+--   the result. 
+--
+-- * The first type, @resp@, is the response type that will be encoded
+--   in JSON and sent as the response body.
+--
+-- * The second type, @result@, is the result type of your \"database\"
+--   or \"context\" operation.
+--
+--   For example, if you're adding an item, and if you're using
 --   postgresql-simple, you'll probably want to write an instance like:
 --
 -- > instance Response UpdateResponse [Only Int] where
@@ -76,6 +93,8 @@ instance ToJSON a => ToJSON (LookupResponse a) where
 class ToJSON resp => Response resp result where
   toResponse :: result -> (resp, Status)
 
+-- | Make 'LookupResponse' a proper 'Response' for
+--   'Service.Context.Context' lookups returning a 'Maybe' value
 instance ToJSON a => Response (LookupResponse a) (Maybe a) where
   toResponse Nothing  = (NotFound, status404)
   toResponse (Just v) = (Found v, status200)
