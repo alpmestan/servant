@@ -34,6 +34,9 @@ import Network.HTTP.Types.Status
 --   It simply holds a 'Bool' that indicates whether the operation
 --   was successful or not, and if it wasn't, it'll embed a text
 --   describing what went wrong.
+--
+--   You can of course skip this one and use a more appropriate
+--   for your particular application.
 data UpdateResponse =
   UpdateResponse { success :: !Bool 
                  , msg     :: !Text
@@ -72,3 +75,7 @@ instance ToJSON a => ToJSON (LookupResponse a) where
 --   to the client along with what HTTP status.
 class ToJSON resp => Response resp result where
   toResponse :: result -> (resp, Status)
+
+instance ToJSON a => Response (LookupResponse a) (Maybe a) where
+  toResponse Nothing  = (NotFound, status404)
+  toResponse (Just v) = (Found v, status200)
