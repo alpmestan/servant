@@ -84,6 +84,7 @@ library
     text >= 1.0,
     tagged,
     reflection,
+    wai-extra,
     scotty,
     aeson,
     http-types

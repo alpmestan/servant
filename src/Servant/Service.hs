@@ -8,6 +8,8 @@ Maintainer  :  Alp Mestanogullari <alp@zalora.com>
 Stability   :  experimental
 
 Function for running a 'Service' composed of one or more 'Resource's in 'ScottyT'.
+
+It also exposes all the other modules.
 -}
 
 module Servant.Service
@@ -15,20 +17,29 @@ module Servant.Service
     Service
   , emptyService
   , resource
+
   , -- * Running a 'Service'
     runService
+  , simpleService
+
   , -- * Defining 'Servant.Resource.Resource's
     module Servant.Resource
+
   , -- * Standard operations for 'Resource's and building your own
     module Servant.Operation
+
   , -- * Properly handling exceptions in 'Resource's
     module Servant.Error
+
   , -- * Connection-like things: 'Context'
     module Servant.Context
+
   , -- * Some standard (JSON) response types, and defining your own
     module Servant.Response
   ) where
 
+import Control.Monad (when)
+import Network.Wai.Middleware.RequestLogger
 import Servant.Context
 import Servant.Error
 import Servant.Operation
@@ -84,3 +95,24 @@ runService :: Monad m
 runService s h = do
   defaultHandler h
   service s
+
+-- | Do we log requests or not?
+data Logging = Logged
+             | NotLogged
+  deriving Eq
+
+-- | A simple function for running a 'Service' in IO.
+--
+--   Just provide it with your service, a port, whether you want
+--   'Logging' or not and an error handler, and it'll run a
+--   scotty-based webservice that delivers the 'Resource's
+--   managed by the 'Service'.
+simpleService :: Service e IO
+              -> Int
+              -> Logging
+              -> (e -> ActionT e IO ())
+              -> IO ()
+simpleService serv port logging handler =
+  scottyT port id id $ do
+    when (logging == Logged) $ middleware logStdoutDev
+    runService serv handler
