@@ -21,13 +21,20 @@ description:
   You can then turn this into a (JSON-based) scotty webservice
   by simply doing:
   .
-  > personService :: ScottyM ()
-  > personService = runResource personResource
+  > personService :: Service Text IO
+  > personService =
+  >   emptyService
+  >     & resource personResource
+  > 
+  > personHandler :: Text -> ActionM ()
+  > personHandler err = do
+  >   status status400
+  >   json err
   >
   > main :: IO ()
   > main = do
   >   print personResource
-  >   scotty 3000 itemService
+  >   scotty 3000 $ runService personService personHandler
   .
   > $ cabal run
   > Resource at: /persons
