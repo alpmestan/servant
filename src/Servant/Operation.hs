@@ -48,6 +48,7 @@ import Data.Text.Lazy (pack)
 import GHC.Exts
 import Network.HTTP.Types.Status
 import Servant.Context
+import Servant.Error
 import Servant.Resource
 import Servant.Response
 import Web.Scotty.Trans
@@ -223,10 +224,10 @@ instance Operation Add where
     where addAction = 
             post (capture $ resourceRoute r) $ do
               val <- jsonData
-              (resp :: UpdateResponse, statuscode)
-                <- toResponse <$> liftIO (withContext (ctx r) $ \c -> f c val)
-              status statuscode
-              json resp
+              raiseIfExc (errCatcher r) (withContext (ctx r) $ \c -> f c val) $ \res -> do
+                let (resp :: UpdateResponse, statuscode) = toResponse res
+                status statuscode
+                json resp
 
 -- | Handy combinator for adding 'Add' support to
 --   a 'Resource'.
@@ -263,10 +264,10 @@ instance Operation Delete where
     where deleteAction =
             delete (capture $ resourceRoute r ++ "/:" ++ keyName r) $ do
               key <- param (pack $ keyName r)
-              (resp :: UpdateResponse, statuscode)
-                <- toResponse <$> liftIO (withContext (ctx r) $ \c -> f c key)
-              status statuscode
-              json resp
+              raiseIfExc (errCatcher r) (withContext (ctx r) $ \c -> f c key) $ \res -> do
+                let (resp :: UpdateResponse, statuscode) = toResponse res
+                status statuscode
+                json resp
 
 -- | Handy combinator for adding 'Delete' support to
 --   a 'Resource'.
@@ -345,10 +346,10 @@ instance Operation Update where
             put (capture $ resourceRoute r ++ "/:" ++ keyName r) $ do
               key <- param (pack $ keyName r)
               newVal <- jsonData
-              (resp :: UpdateResponse, statuscode)
-                <- toResponse <$> liftIO (withContext (ctx r) $ \c -> f c key newVal)
-              status statuscode
-              json resp
+              raiseIfExc (errCatcher r) (withContext (ctx r) $ \c -> f c key newVal) $ \res -> do
+                let (resp :: UpdateResponse, statuscode) = toResponse res
+                status statuscode
+                json resp
 
 -- | Handy combinator for adding 'Update' support to
 --   a 'Resource'.
