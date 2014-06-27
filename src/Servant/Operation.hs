@@ -213,7 +213,7 @@ instance Reifies Add String where
 
 instance Operation Add where
   type DataConstraint Add a i r
-    = (FromJSON a, Response UpdateResponse r)
+    = (FromJSON a, Response (UpdateResponse Add) r)
 
   type Function Add c a i r = c -> a -> IO r
 
@@ -224,7 +224,7 @@ instance Operation Add where
             post (capture $ resourceRoute r) $ do
               val <- jsonData
               raiseIfExc (errCatcher r) (withContext (ctx r) $ \c -> f c val) $ \res -> do
-                let (resp :: UpdateResponse, statuscode) = toResponse res
+                let (resp :: UpdateResponse Add, statuscode) = toResponse res
                 status statuscode
                 json resp
 
@@ -234,7 +234,7 @@ instance Operation Add where
 -- > mkResourceAt "/persons" "personid" withConnection
 -- >   & addWith personAdd
 addWith :: ( Functor m, MonadIO m, ScottyError e
-           , FromJSON a, Response UpdateResponse r
+           , FromJSON a, Response (UpdateResponse Add) r
            )
         => (c -> a -> IO r)
         -> Resource m e c a i r ops
@@ -253,7 +253,7 @@ instance Reifies Delete String where
 
 instance Operation Delete where
   type DataConstraint Delete a i r = 
-    (Parsable i, Response UpdateResponse r)
+    (Parsable i, Response (UpdateResponse Delete) r)
 
   type Function Delete c a i r = c -> i -> IO r
 
@@ -264,7 +264,7 @@ instance Operation Delete where
             delete (capture $ resourceRoute r ++ "/:" ++ keyName r) $ do
               key <- param (pack $ keyName r)
               raiseIfExc (errCatcher r) (withContext (ctx r) $ \c -> f c key) $ \res -> do
-                let (resp :: UpdateResponse, statuscode) = toResponse res
+                let (resp :: UpdateResponse Delete, statuscode) = toResponse res
                 status statuscode
                 json resp
 
@@ -274,7 +274,7 @@ instance Operation Delete where
 -- > mkResourceAt "/persons" "personid" withConnection
 -- >   & deleteWith personDelete
 deleteWith :: ( Functor m, MonadIO m, ScottyError e
-              , Parsable i, Response UpdateResponse r
+              , Parsable i, Response (UpdateResponse Delete) r
               )
            => (c -> i -> IO r)
            -> Resource m e c a i r ops
@@ -333,7 +333,7 @@ instance Operation Update where
   type DataConstraint Update a i r =
     ( FromJSON a
     , Parsable i
-    , Response UpdateResponse r
+    , Response (UpdateResponse Update) r
     )
 
   type Function Update c a i r = c -> i -> a -> IO r
@@ -346,7 +346,7 @@ instance Operation Update where
               key <- param (pack $ keyName r)
               newVal <- jsonData
               raiseIfExc (errCatcher r) (withContext (ctx r) $ \c -> f c key newVal) $ \res -> do
-                let (resp :: UpdateResponse, statuscode) = toResponse res
+                let (resp :: UpdateResponse Update, statuscode) = toResponse res
                 status statuscode
                 json resp
 
@@ -356,7 +356,7 @@ instance Operation Update where
 -- > mkResourceAt "/persons" "personid" withConnection
 -- >   & updateWith personUpdate
 updateWith :: ( Functor m, MonadIO m, ScottyError e
-              , FromJSON a, Parsable i, Response UpdateResponse r
+              , FromJSON a, Parsable i, Response (UpdateResponse Update) r
               )
            => (c -> i -> a -> IO r)
            -> Resource m e c a i r ops

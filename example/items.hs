@@ -1,4 +1,5 @@
 {-# LANGUAGE MultiParamTypeClasses,
+             FlexibleInstances,
              GeneralizedNewtypeDeriving,
              DeriveGeneric,
              OverloadedStrings #-}
@@ -57,9 +58,20 @@ itemUpdate (Connection ref) itemid item = atomicModifyIORef' ref f
 itemList :: Connection -> IO [Item]
 itemList (Connection ref) = M.elems <$> readIORef ref
 
-instance Response UpdateResponse Bool where
+instance Response (UpdateResponse Add) Bool where
   toResponse False = (UpdateResponse False "Not found", status404)
   toResponse True  = (UpdateResponse True "", status200)
+
+
+instance Response (UpdateResponse Update) Bool where
+  toResponse False = (UpdateResponse False "Not found", status404)
+  toResponse True  = (UpdateResponse True "", status200)
+
+
+instance Response (UpdateResponse Delete) Bool where
+  toResponse False = (UpdateResponse False "Not found", status404)
+  toResponse True  = (UpdateResponse True "", status200)
+
 
 {-
 itemResource :: Resource IO

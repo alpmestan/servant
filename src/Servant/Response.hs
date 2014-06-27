@@ -37,13 +37,13 @@ import Network.HTTP.Types.Status
 --
 --   You can of course skip this one and use a more appropriate
 --   for your particular application.
-data UpdateResponse =
+data UpdateResponse o =
   UpdateResponse { success :: !Bool 
                  , msg     :: !Text
                  }
   deriving (Eq, Show, Generic)
 
-instance ToJSON UpdateResponse where
+instance ToJSON (UpdateResponse o) where
 
 -- | A generic response type for an operation performing
 --   some kind of (potentially failing) lookup of an item
