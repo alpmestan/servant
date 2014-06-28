@@ -94,7 +94,7 @@ handledWith act (EC hs) = fmap Right act `catches` map runCatcher hs
 catchAnd :: (Exception except, ScottyError err)
          => (except -> err) 
          -> ExceptionCatcher err
-catchAnd f = EC $ [catcher]
+catchAnd f = EC [catcher]
   where catcher = Catcher f
 
 -- | Run an 'IO' action against zero or more catchers,

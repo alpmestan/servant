@@ -44,4 +44,4 @@ mkContext = Context
 withContext :: Context c
             -> (c -> IO r)
             -> IO r
-withContext c act = withctx c act
+withContext = withctx
