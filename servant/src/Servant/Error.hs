@@ -25,7 +25,6 @@ module Servant.Error
 import Control.Exception
 import Control.Monad.IO.Class
 import Data.Monoid
-import Web.Scotty.Trans
 
 -- | A container for zero or more "exception catchers".
 --
@@ -91,28 +90,8 @@ handledWith act (EC hs) = fmap Right act `catches` map runCatcher hs
 --   using 'raiseIfExc' or 'handledWith', if an exception of this type
 --   is thrown, it will be caught and converted to the error type of your
 --   web application using the provided function.
-catchAnd :: (Exception except, ScottyError err)
+catchAnd :: Exception except
          => (except -> err) 
          -> ExceptionCatcher err
 catchAnd f = EC [catcher]
   where catcher = Catcher f
-
--- | Run an 'IO' action against zero or more catchers,
---   so that if an exception arises and is handled by one of the
---   catchers, it gets 'raise'd in your scotty application using
---   the conversion function your provided in the call to 'catchAnd'.
---
---   If no exception is thrown, it executes the supplied scotty 'Action'.
---
---   If an exception type for which you don't provide a catcher is thrown,
---   it'll propagate and most likely hit scotty's 'defaultHandler' as a dumb
---   string, so you'll still know about it but you won't be able to do a proper
---   translation.
-raiseIfExc :: (ScottyError e, MonadIO m)
-           => ExceptionCatcher e
-           -> IO a
-           -> (a -> ActionT e m ())
-           -> ActionT e m ()
-raiseIfExc cs act ifok = do
-  res <- liftIO $ act `handledWith` cs
-  either raise ifok res
