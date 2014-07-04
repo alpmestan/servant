@@ -29,6 +29,7 @@ module Servant.Resource
   , withHeadOperation
   , dropHeadOperation
   , mkResource
+  , identifiersAre
   , addOperation
   , Operation
   , (&)
@@ -75,6 +76,7 @@ type Contains (elem :: *) (list :: [*]) = False
 --   * supports the operations listed in the @ops@ type list
 data Resource c a i r e (ops :: [*])
   = Resource { name       :: String
+             , keys       :: [String]
              , context    :: Context c
              , excCatcher :: ExceptionCatcher e
              , operations :: HList (Ops ops c a i r)
@@ -126,8 +128,19 @@ dropHeadOperation r = r { operations = operations' }
 mkResource :: String
            -> Context c
            -> ExceptionCatcher e
-           -> Resource c a i r e '[]
-mkResource n ctx catcher = Resource n ctx catcher Nil
+           -> Resource c a () r e '[]
+mkResource n ctx catcher = Resource n [] ctx catcher Nil
+
+-- | What param name(s) should we look up in urls
+--   for endpoints that require you to identify
+--   a precise object. We support several identifiers
+--   in case a particular entry can be identifier in several ways,
+--   e.g by a token /or/ some entry id. In that case, you @i@ type
+--   should be compatible with that.
+identifiersAre :: [String]
+               -> Resource c a i r e ops
+               -> Resource c a i r e ops
+identifiersAre ks r = r { keys = ks }
 
 -- | Add an operation to a resource by specifying the \"database function\"
 --   that'll actually perform the lookup/update/listing/what not.
