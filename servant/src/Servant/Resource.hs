@@ -19,6 +19,7 @@ module Servant.Resource
   , mkResource
   , addOperation
   , Operation
+  , (&)
   ) where
 
 import Servant.Context
@@ -31,7 +32,7 @@ data HList :: [*] -> * where
 
 -- | Get the tail of an heterogeneous list
 htail :: HList (a ': as) -> HList as
-htail (Cons h t) = t
+htail (Cons _ t) = t
 
 -- | Utility (closed) type family to detect whether a type
 --   is contained in a type-level list of types

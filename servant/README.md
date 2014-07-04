@@ -1,11 +1,6 @@
 servant
 =======
 
-A simple and extensible library on top of scotty to define and generate resource/REST oriented web-service just from the database functions.
+A simple and extensible library to define and generate resource/REST oriented web-services just from the database functions. This is the core package and thus isn't tied to a particular database or web-framework. It actually just depends on **base** right now.
 
 See [here](http://alpmestan.com/servant/) for documentation.
-
-### Related projects
-
-- [servant-postgresql](http://github.com/zalora/servant-postgresql)
-- [servant-pool](http://github.com/zalora/servant-pool)

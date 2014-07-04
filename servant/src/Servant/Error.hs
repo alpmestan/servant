@@ -29,7 +29,7 @@ import Data.Monoid
 --   some precise instance of 'Exception' to the error type used in
 --   your scotty app (the @e@ type in "Servant.Resource" "Servant.Service")
 newtype ExceptionCatcher err =
-	EC { catchers :: [Catcher err] }
+	EC [Catcher err]
 
 -- a handy type for representing a single function that can catch
 -- some (specific) exception.
