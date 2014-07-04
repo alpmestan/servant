@@ -1,9 +1,23 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeOperators #-}
 
+{- |
+Module      :  Servant.Scotty
+Copyright   :  (c) Zalora SEA 2014
+License     :  BSD3
+Maintainer  :  Alp Mestanogullari <alp@zalora.com>
+Stability   :  experimental
+
+Module for defining a <http://hackage.haskell.org/package/scotty scotty>
+webservice from 'Resource's.
+
+> EXAMPLE HERE
+-}
 module Servant.Scotty
-  ( runResource
+  ( -- * Setting up handlers for a 'Resource'
+    runResource
   , Runnable
+    -- * Defining handlers for an operation
   , ScottyOp(..)
   ) where
 

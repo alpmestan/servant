@@ -7,7 +7,7 @@ Maintainer  :  Alp Mestanogullari <alp@zalora.com>
 Stability   :  experimental
 
 Everything you'll need when doing some kind of exception handling
-around your "database operations".
+around your \"database operations\".
 -}
 module Servant.Error
   ( -- * Creating an combining 'ExceptionCatcher's

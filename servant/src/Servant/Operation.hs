@@ -13,6 +13,8 @@ Copyright   :  (c) Zalora SEA 2014
 License     :  BSD3
 Maintainer  :  Alp Mestanogullari <alp@zalora.com>
 Stability   :  experimental
+
+Some standard REST-y operations.
 -}
 module Servant.Operation where
 
