@@ -1,6 +1,6 @@
 language: haskell
 
-script:
+install:
   - cd servant && cabal install --only-d && cabal configure && cabal build
   # - cd servant-pool && cabal sandbox init && cabal sandbox add-source ../servant && cabal install --only-d && cabal configure && cabal build
   # - cd servant-postgresql && cabal sandbox init && cabal sandbox add-source ../servant && cabal install --only-d && cabal configure && cabal build
