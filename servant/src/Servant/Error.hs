@@ -12,7 +12,7 @@ around your \"database operations\".
 module Servant.Error
   ( -- * Creating an combining 'ExceptionCatcher's
     ExceptionCatcher
-  , noErrorHandling
+  , noCatch
   , catchAnd
   , combineCatchers
 
@@ -38,8 +38,8 @@ newtype ExceptionCatcher err =
 data Catcher err = forall exc. Exception exc => Catcher (exc -> err)
 
 -- | Don't catch any exception.
-noErrorHandling :: ExceptionCatcher err
-noErrorHandling = EC []
+noCatch :: ExceptionCatcher err
+noCatch = EC []
 
 -- | Combine two 'ExceptionCatcher'.
 --
