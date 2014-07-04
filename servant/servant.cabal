@@ -5,60 +5,14 @@ description:
   An abstraction for 'Resource's that can support any number
   of operations, which will be tagged at the type-level.
   .
-  Here's a specification for a 'Person' resource, from which we can generate a scotty webapp:
+  This package however does provide standard /REST-y/ operations
+  ('Servant.Operation.Add', 'Servant.Operation.Delete', 'Servant.Operation.ListAll'
+  , 'Servant.Operation.Update' and 'Servant.Operation.View') and lets you define your
+  own.
   .
-  > personResource = 
-  >   mkResourceAt "/persons" "personid" withPGConnection
-  >     & addWith addPerson
-  >     & listWith listPersons
-  >     & deleteWith deletePerson
-  .
-  provided you have 'addPerson', 'listPersons' and 'deletePerson',
-  as described in "Servant.Operation", and withPGConnection should
-  be a function using a connection or connection pool or any kind of such
-  /context/ that you have set up previously.
-  .
-  You can then turn this into a (JSON-based) scotty webservice
-  by simply doing:
-  .
-  > personService :: Service Text IO
-  > personService =
-  >   emptyService
-  >     & resource personResource
-  > 
-  > personHandler :: Text -> ActionM ()
-  > personHandler err = do
-  >   status status400
-  >   json err
-  >
-  > main :: IO ()
-  > main = do
-  >   print personResource
-  >   scotty 3000 $ runService personService personHandler
-  .
-  > $ cabal run
-  > Resource at: /persons
-  >   Indexed by key: personid
-  >   Supports:
-  >     - Add
-  >     - Delete
-  >     - List
-  >
-  > Setting phasers to stun... (port 3000) (ctrl-c to quit)
-  .
-  * "Servant.Resource" contains the abstraction for a Resource
-  * "Servant.Operation" shows you what an operation is, what operations
-    are provided out of the box, and how you can define your owns.
-  * "Servant.Context" contains the abstraction for things like database connections
-    , handles, etc.
-  * "Servant.Response" contains everything related to getting the response of your
-    database or the like transformed into a suitable JSON value
-  * "Servant.Service" lets you build up a webservice composed of several resources
-    and reexports all the other modules so that you just have to:
-    .
-    > import Servant.Service
-    .
-    to get started with /servant/.
+  You can then actually make a service out of a 'Servant.Resource.Resource' description
+  using any backend you like (we currently only provide a
+  <http://hackage.haskell.org/package/scotty scotty> backend).
 homepage:            http://github.com/zalora/servant
 license:             BSD3
 license-file:        LICENSE
