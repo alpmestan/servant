@@ -32,6 +32,7 @@ module Servant.Resource
   , addOperation
   , Operation
   , (&)
+  , Ops
   ) where
 
 import Servant.Context

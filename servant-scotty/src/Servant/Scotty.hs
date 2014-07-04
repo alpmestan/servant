@@ -15,8 +15,7 @@ webservice from 'Resource's.
 -}
 module Servant.Scotty
   ( -- * Setting up handlers for a 'Resource'
-    runResource
-  , Runnable
+    Runnable(runResource)
     -- * Defining handlers for an operation
   , ScottyOp(..)
   ) where
