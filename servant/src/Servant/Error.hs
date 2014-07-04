@@ -18,12 +18,9 @@ module Servant.Error
 
   , -- * Running 'IO' actions against an 'ExceptionCatcher'
     handledWith
-  , -- * Catching exceptions and raising them as an error in scotty
-    raiseIfExc
   ) where
 
 import Control.Exception
-import Control.Monad.IO.Class
 import Data.Monoid
 
 -- | A container for zero or more "exception catchers".

@@ -9,7 +9,17 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Servant.Resource where
+module Servant.Resource
+  ( Contains
+  , Resource
+  , name
+  , context
+  , excCatcher
+  , dropHeadOperation
+  , mkResource
+  , addOperation
+  , Operation
+  ) where
 
 import Servant.Context
 import Servant.Error
@@ -35,6 +45,7 @@ type Contains (elem :: *) (list :: [*]) = False
 #endif
 
 -- | A resource that:
+--
 --   * uses some context type @c@ (think database connection)
 --   * manages entries of type @a@
 --   * (optionally) supports indexing through the @i@ type (a dumb ID, or something like
@@ -63,6 +74,11 @@ instance (Show o, Show (Resource c a i r e ops))
 
     where opstring = "\n  - " ++ show (undefined :: o)
 
+-- | Type-safely \"unconsider\" the first operation in the list
+--
+--   Helpful when performing recursion on the type-level list
+--   and the internal list of \"database functions\"
+--   simultaneously.
 dropHeadOperation :: Resource c a i r e (o ': ops) -> Resource c a i r e ops
 dropHeadOperation r = r { operations = operations' }
 
