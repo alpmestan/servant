@@ -9,12 +9,24 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
+{- |
+Module      :  Servant.Resource
+Copyright   :  (c) Zalora SEA 2014
+License     :  BSD3
+Maintainer  :  Alp Mestanogullari <alp@zalora.com>
+Stability   :  experimental
+
+Module for defining 'Resource's.
+
+> EXAMPLE HERE
+-}
 module Servant.Resource
   ( Contains
   , Resource
   , name
   , context
   , excCatcher
+  , withHeadOperation
   , dropHeadOperation
   , mkResource
   , addOperation
@@ -29,6 +41,9 @@ import Servant.Error
 data HList :: [*] -> * where
   Nil :: HList '[]
   Cons :: a -> HList as -> HList (a ': as)
+
+hhead :: HList (a ': as) -> a
+hhead (Cons h _) = h
 
 -- | Get the tail of an heterogeneous list
 htail :: HList (a ': as) -> HList as
@@ -74,6 +89,20 @@ instance (Show o, Show (Resource c a i r e ops))
     opstring
 
     where opstring = "\n  - " ++ show (undefined :: o)
+
+-- | Typically, functions that will use our operations will need access
+--   to the resource's name and what not, so we need to provide them with
+--   the resource. But we obviously also need the \"database function\"
+--   associated to our operation. So we provide it too.
+--
+--   Just give this function a 'Resource' and a function that uses it,
+--   most likely to run the handler for an operation,
+--   and it'll give your function the right arguments.
+withHeadOperation :: Resource c a i r e (o ': ops)
+                  -> (Resource c a i r e (o ': ops) -> Operation o c a i r -> b)
+                  -> b
+withHeadOperation res runop =
+  runop res (hhead $ operations res)
 
 -- | Type-safely \"unconsider\" the first operation in the list
 --
