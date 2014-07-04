@@ -57,13 +57,12 @@ pooledContextOfConnInfo :: Int             -- ^ Number of stripes (sub-pools). /
                                            --   per stripe. /Minimum: 1/
                         -> ConnectInfo     -- ^ connection information
                         -> IO (Context Connection)
-pooledContextOfConnInfo nstripes idleDuration maxOpen ci = do
-  pool <- createPool (connect ci)
-                     close
-                     nstripes
-                     idleDuration
-                     maxOpen
-  return $ contextOfPool pool
+pooledContextOfConnInfo nstripes idleDuration maxOpen ci =
+  pooledContext (connect ci)
+                close
+                nstripes
+                idleDuration
+                maxOpen
 
 -- | Create a 'Context' that'll use a 'Pool' of
 --   PostgreSQL 'Connection's internally, from
@@ -75,13 +74,12 @@ pooledContextOfConnStr :: Int             -- ^ Number of stripes (sub-pools). /M
                                           --   per stripe. /Minimum: 1/
                        -> ByteString      -- ^ connection string
                        -> IO (Context Connection)
-pooledContextOfConnStr nstripes idleDuration maxOpen connstr = do
-  pool <- createPool (connectPostgreSQL connstr)
-                     close
-                     nstripes
-                     idleDuration
-                     maxOpen
-  return $ contextOfPool pool
+pooledContextOfConnStr nstripes idleDuration maxOpen connstr =
+  pooledContext (connectPostgreSQL connstr)
+                close
+                nstripes
+                idleDuration
+                maxOpen
 
 {-
 -- | Simple wrapper around @postgresql-simple@'s @['Only' 'Int']@
