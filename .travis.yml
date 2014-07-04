@@ -1,9 +1,16 @@
 language: haskell
 
-script:
-  - ./init.sh && ./build.sh
+ghc:
+  - 7.8
+  - 7.6
+  - 7.4
+
 before_install:
   - cabal update
+install:
+  - ./init.sh
+script:
+  - ./build.sh
   
 notifications:
   email:
