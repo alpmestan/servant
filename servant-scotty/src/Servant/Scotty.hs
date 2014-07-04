@@ -1,4 +1,6 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 
 {- |
@@ -21,6 +23,7 @@ module Servant.Scotty
   ) where
 
 import Control.Monad.IO.Class
+import GHC.Exts
 import Servant.Resource
 import Web.Scotty.Trans
 
@@ -37,7 +40,7 @@ import Web.Scotty.Trans
 class Runnable ops where
   -- | Call this function to setup a 'Resource' in your
   --   scotty application.
-  runResource :: (MonadIO m, ScottyError e)
+  runResource :: (MonadIO m, ScottyError e, Suitables ops a i r)
               => Resource c a i r e ops
               -> ScottyT e m ()
 
@@ -66,6 +69,19 @@ instance (ScottyOp o, Runnable ops) => Runnable (o ': ops) where
 
 -- | A class that lets you define a handler for an operation @o@.
 class ScottyOp o where
+  -- | Each operation can define its own constraints on:
+  --
+  --   * the type of the entries, @a@
+  --   * the type by which the entries are indexed, @i@
+  --   * the result type @r@ of \"effectful\" database operations
+  --     (those that add/update/delete entries)
+  --
+  --   This is useful because that way, your types will /only/ have to
+  --   satisfy the constraints /specified/ by the operations your 'Resource'
+  --   carries, not some global dumb constaints you have to pay for even if you
+  --   just need one operation with only one 'Constraint'.
+  type Suitable o a i r :: Constraint
+
   -- | Given a 'Resource' and the \"database function\" (so to speak)
   --   corresponding to your operation, do some business in /scotty/'s
   --   'ScottyT' and 'ActionT' monads to define a handler for this very operation.
@@ -81,7 +97,11 @@ class ScottyOp o where
   --   to your error type @e@. You can then 'raise' the error value
   --   if you have a sensible default handler or handle it locally and
   --   respond with whatever is appropriate in your case.
-  runOperation :: (MonadIO m, ScottyError e)
+  runOperation :: (MonadIO m, ScottyError e, Suitable o a i r)
                => Resource c a i r e (o ': ops)
                -> Operation o c a i r
                -> ScottyT e m ()
+
+type family Suitables (ops :: [*]) a i r :: Constraint
+type instance Suitables '[] a i r = ()
+type instance Suitables (o ': ops) a i r = (Suitable o a i r, Suitables ops a i r)
