@@ -1,6 +1,6 @@
 language: haskell
 
-install:
+script:
   - ./init.sh && ./build.sh
 before_install:
   - cabal update
