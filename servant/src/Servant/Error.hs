@@ -53,7 +53,7 @@ combineCatchers (EC c1s) (EC c2s) = EC (c1s ++ c2s)
 -- | If you're into 'Monoid's, enjoy our
 --   'mempty' ('noErrorHandling') and '<>' ('combineCatchers').
 instance Monoid (ExceptionCatcher err) where
-  mempty = noErrorHandling
+  mempty = noCatch
 
   mappend = combineCatchers
 
