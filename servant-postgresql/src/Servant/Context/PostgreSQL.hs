@@ -1,48 +1,89 @@
-{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses, OverloadedStrings #-}
 {- |
-Module      :  Servant.Context
+Module      :  Servant.Context.PostgreSQL
 Copyright   :  (c) Zalora SEA 2014
 License     :  BSD3
 Maintainer  :  Alp Mestanogullari <alp@zalora.com>
 Stability   :  experimental
 
-Useful functions and instances for using servant with a PostgreSQL context.
+Useful functions and instances for using servant with a PostgreSQL database.
 
-* Use 'contextOfConnInfo' or 'contextOfConnStr' to create 'Context's.
-* Use the 'PGResult'-related functions and instances to benefit from the
-  'UpdateResponse' instances (for 'Add', 'Delete' and 'Update').
+* Use 'contextOfConnInfo' or 'contextOfConnStr' to create a PostgreSQL 'Context's.
+* If you want connection-pooling, use 'pooledContextOfConnInfo' and
+  'pooledContextOfConnStr'.
 -}
 module Servant.Context.PostgreSQL
   ( -- * PostgreSQL 'Context'
     contextOfConnInfo
   , contextOfConnStr
-  , -- * 'PGResult' and 'Response' instances
-    PGResult
-  , resultOfInts
+  , -- * PostgreSQL 'Context' with connection pooling
+    pooledContextOfConnInfo
+  , pooledContextOfConnStr
+
   ) where
 
 import Control.Exception
 import Data.ByteString (ByteString)
-import Data.Foldable
-import Data.Monoid
 import Database.PostgreSQL.Simple
-import Network.HTTP.Types.Status
-import Servant.Operation
-import Servant.Response
 import Servant.Context
+import Servant.Context.Pool
 
 -- | Create a @'Context' 'Connection'@ from the given
---   'ConnectInfo'
+--   'ConnectInfo'.
+--
+--   This means a new connection will be fired whenever you
+--   perform a database operation. If you want to avoid that,
+--   see the /pooledContextOfXXX/ functions.
 contextOfConnInfo :: ConnectInfo -> Context Connection
 contextOfConnInfo ci = mkContext f
   where f act = bracket (connect ci) close act
 
 -- | Create a @'Context' 'Connection'@ from the given
 --   connection string.
+--
+--   This means a new connection will be fired whenever you
+--   perform a database operation. If you want to avoid that,
+--   see the /pooledContextOfXXX/ functions.
 contextOfConnStr :: ByteString -> Context Connection
 contextOfConnStr str = mkContext f
   where f act = bracket (connectPostgreSQL str) close act
 
+-- | Create a 'Context' that'll use a 'Pool' of
+--   PostgreSQL 'Connection's internally, from
+--   a 'ConnectInfo' value.
+pooledContextOfConnInfo :: Int             -- ^ Number of stripes (sub-pools). /Minimum: 1/
+                        -> NominalDiffTime -- ^ amount of time during which an unused
+                                           --   'Connection' is kept open
+                        -> Int             -- ^ Maximum number of resources to keep open
+                                           --   per stripe. /Minimum: 1/
+                        -> ConnectInfo     -- ^ connection information
+                        -> IO (Context Connection)
+pooledContextOfConnInfo nstripes idleDuration maxOpen ci = do
+  pool <- createPool (connect ci)
+                     close
+                     nstripes
+                     idleDuration
+                     maxOpen
+  return $ contextOfPool pool
+
+-- | Create a 'Context' that'll use a 'Pool' of
+--   PostgreSQL 'Connection's internally, from
+--   a connection string (a 'ByteString').
+pooledContextOfConnStr :: Int             -- ^ Number of stripes (sub-pools). /Minimum: 1/
+                       -> NominalDiffTime -- ^ amount of time during which an unused
+                                          --   'Connection' is kept open
+                       -> Int             -- ^ Maximum number of resources to keep open
+                                          --   per stripe. /Minimum: 1/
+                       -> ByteString      -- ^ connection string
+                       -> IO (Context Connection)
+pooledContextOfConnStr nstripes idleDuration maxOpen connstr = do
+  pool <- createPool (connectPostgreSQL connstr)
+                     close
+                     nstripes
+                     idleDuration
+                     maxOpen
+  return $ contextOfPool pool
+
+{-
 -- | Simple wrapper around @postgresql-simple@'s @['Only' 'Int']@
 newtype PGResult =
   PGResult { onlyInts :: [Only Int] }
@@ -87,4 +128,4 @@ instance Response (UpdateResponse Delete) PGResult where
           m = if affected < 1 then "Not found" else ""
           responseStatus =
             if successful then status200 else notFound404
-
+-}

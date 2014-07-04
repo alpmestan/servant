@@ -11,6 +11,7 @@ using <http://hackage.haskell.org/package/resource-pool resource-pool>
 module Servant.Context.Pool
   ( pooledContext
   , contextOfPool
+  , NominalDiffTime
   ) where
 
 import Data.Pool (Pool, withResource, createPool)
@@ -19,7 +20,7 @@ import Servant.Context
 
 -- | Use this function to get a 'Context'
 --   using a 'Pool' you already have around.
---   Note that the type of the 'Context' is not
+--   Note that the type in the 'Context' is not
 --   @Pool c@ but just @c@. 
 --
 --   It'll however use 'withResource' under the hood
