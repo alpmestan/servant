@@ -43,12 +43,14 @@ And now, we can turn that `personResource` into a `scotty` web-service by simply
 
 ``` haskell
 import Servant.Scotty
+import Web.Scotty
 
 port :: Int
 port = 4321
 
 main :: IO ()
 main =
+  -- the service will listen on port 4321
   scotty 4321 (runResource personResource)
 ```
 
@@ -64,11 +66,11 @@ In addition to the RESTish operations, you can define your own in a simple
 and type-safe way.
 
 Also, right now, I'm focusing on our use cases at **Zalora**, where we need
-pooling support on top of /PostgreSQL/ connections, and tend to run write web apps using [scotty](http://hackage.haskell.org/package/scotty). Nothing keeps you from writing a "backend" for your favorite web framework, it would most likely be quite similar to the scotty one, so you can just look at its code. However, if I don't have a write up yet about how that should be done by the time you want to do that, I gladly encourage you to shoot me an email.
+pooling support on top of /PostgreSQL/ connections, and tend to write web apps using [scotty](http://hackage.haskell.org/package/scotty). Nothing keeps you from writing a "backend" for your favorite web framework, it would most likely be quite similar to the scotty one, so you can just look at its code. However, if I don't have a write up yet about how that should be done by the time you want to do that, I gladly encourage you to shoot me an email.
 
 ## Documentation
 
-[Documentation with all modules from all these packages](htp://alpmestan.com/servant/)
+[Documentation with all modules all packages](http://alpmestan.com/servant/)
 
 or for individual packages:
 

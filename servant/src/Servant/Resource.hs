@@ -24,6 +24,7 @@ module Servant.Resource
   ( Contains
   , Resource
   , name
+  , keys
   , context
   , excCatcher
   , withHeadOperation
@@ -69,16 +70,22 @@ type Contains (elem :: *) (list :: [*]) = False
 --   * (optionally) supports indexing through the @i@ type (a dumb ID, or something like
 --     @data FooId = ByToken Token | ByID Integer@). That can be useful when trying to view,
 --     update or delete a particular entry, for example.
---   * uses @r@ as the return type for /effectful/ database operations (adding/updating/deleting entries
+--   * uses @r@ as the return type for /effectful/ database operations (e.g. adding, updating, deleting entries
 --     for example)
 --   * can catch exceptions, converting them to some error type
 --     @e@ of yours
---   * supports the operations listed in the @ops@ type list
+--   * supports the operations listed in the @ops@ type list. a corresponding
+--     (heterogeneous) list of "database functions" is held internally and we
+--     ask the compiler to make the types of these functions match with the ones
+--     expected for the operations listed at the type-level.
 data Resource c a i r e (ops :: [*])
-  = Resource { name       :: String
-             , keys       :: [String]
-             , context    :: Context c
-             , excCatcher :: ExceptionCatcher e
+  = Resource { name       :: String    -- ^ Get the name of the 'Resource'
+             , keys       :: [String]  -- ^ Under what name(s) can we expect to see
+                                       --   the index or indices
+             , context    :: Context c -- ^ Gives the 'Context' attached to this 'Resource'
+             , excCatcher :: ExceptionCatcher e -- ^ Hands you the 'ExceptionCatcher' you can
+                                                --   'handledWith' with to make your \"database operations\"
+                                                --   exception safe.
              , operations :: HList (Ops ops c a i r)
              }
 
@@ -143,7 +150,10 @@ identifiersAre :: [String]
 identifiersAre ks r = r { keys = ks }
 
 -- | Add an operation to a resource by specifying the \"database function\"
---   that'll actually perform the lookup/update/listing/what not.
+--   that'll actually perform the lookup, update, listing, search and what not.
+--
+--   We statically enforce that the operation we're adding isn't
+--   already supported by the 'Resource', when built with @ghc >= 7.8@.
 addOperation :: Contains o ops ~ False
              => Operation o c a i r 
              -> Resource c a i r e ops 

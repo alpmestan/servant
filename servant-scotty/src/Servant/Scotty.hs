@@ -10,8 +10,8 @@ License     :  BSD3
 Maintainer  :  Alp Mestanogullari <alp@zalora.com>
 Stability   :  experimental
 
-Module for defining a <http://hackage.haskell.org/package/scotty scotty>
-webservice from 'Resource's.
+Module for defining <http://hackage.haskell.org/package/scotty scotty>
+webservices from 'Resource's.
 
 > EXAMPLE HERE
 -}
@@ -20,6 +20,9 @@ module Servant.Scotty
     Runnable(runResource)
     -- * Defining handlers for an operation
   , ScottyOp(..)
+    -- * Utilities
+  , Runnable
+  , Suitables
   ) where
 
 import Control.Monad.IO.Class
@@ -28,10 +31,13 @@ import Servant.Resource
 import Web.Scotty.Trans
 
 -- | Internal class used to drive the recursion
---   on the list of operations.
+--   on the list of operations when generating all
+--   the endpoints and handlers.
 --
 --   This lets everyone care only about the specific
---   behavior of their operations.
+--   behavior of their operations, this class will make
+--   sure all the operations of your 'Resource' have an
+--   implementation.
 --
 --   Regardless of what's
 --   specific about each operation, we just recursively
@@ -78,8 +84,8 @@ class ScottyOp o where
   --
   --   This is useful because that way, your types will /only/ have to
   --   satisfy the constraints /specified/ by the operations your 'Resource'
-  --   carries, not some global dumb constaints you have to pay for even if you
-  --   just need one operation with only one 'Constraint'.
+  --   carries, not some global dumb constraints you have to pay for even if
+  --   you don't care about the operation that requires this constraint.
   type Suitable o a i r :: Constraint
 
   -- | Given a 'Resource' and the \"database function\" (so to speak)
