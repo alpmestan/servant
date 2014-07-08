@@ -12,14 +12,15 @@ description:
   .
   You can then actually make a service out of a 'Servant.Resource.Resource' description
   using any backend you like (we currently only provide a
-  <http://hackage.haskell.org/package/scotty scotty> backend).
+  <http://hackage.haskell.org/package/scotty scotty> backend in
+  the /servant-scotty/ package).
 homepage:            http://github.com/zalora/servant
 license:             BSD3
 license-file:        LICENSE
 author:              Alp Mestanogullari
 maintainer:          alp@zalora.com
 copyright:           2014 Zalora SEA
-category:            Web
+category:            Web, Database
 build-type:          Simple
 cabal-version:       >=1.10
 

@@ -14,11 +14,17 @@ in "Servant.Prelude", along with some reusable types
 necessary for the instances.
 -}
 module Servant.Scotty.Prelude
-  ( -- * 'ScottyOp' class and standard operations
+  ( -- * Defining 'Resource's and standard operations
+    module Servant.Prelude
+
+  , -- * 'ScottyOp' class and standard operations implementations in scotty
     ScottyOp(..)
-  , module Servant.Prelude
-  , -- * Predefined response types
-    LookupResponse(..)
+
+  , -- * Helpful types, functions, classes and instances
+    --   for defining your own operations
+    module Servant.Scotty.Arguments
+  , module Servant.Scotty.Response
+  , LookupResponse(..)
   , UpdateResponse(..)
   ) where
 
@@ -27,7 +33,6 @@ import Data.Aeson
 import Data.Text (Text)
 import GHC.Generics
 import Servant.Prelude
-import Servant.Resource
 import Servant.Scotty.Op
 import Servant.Scotty.Response
 import Servant.Scotty.Arguments

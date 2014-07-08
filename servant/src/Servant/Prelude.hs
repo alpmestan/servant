@@ -23,8 +23,27 @@ having 'FromJSON' or 'ToJSON' instances and the appropriate
 'toResponse' implementations for the return types of your
 database.
 -}
-module Servant.Prelude where
+module Servant.Prelude
+ ( -- * Defining 'Resource's
+   module Servant.Resource
+ , module Servant.Context
+ , module Servant.Error
+ 
+ , -- * Standard operations
+   Add
+ , addWith
+ , Delete
+ , deleteWith
+ , ListAll
+ , listAllWith
+ , Update
+ , updateWith
+ , View
+ , viewWith
+ ) where
 
+import Servant.Context
+import Servant.Error
 import Servant.Resource
 
 -- | A dummy type representing an operation that adds an entry.

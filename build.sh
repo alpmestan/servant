@@ -1,1 +1,1 @@
-cabal install servant servant-pool servant-postgresql servant-scotty --reinstall
+cabal install servant servant-pool servant-postgresql servant-scotty servant-example --reinstall
