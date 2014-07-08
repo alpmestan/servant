@@ -1,5 +1,5 @@
 name:                servant
-version:             0.1.0.0
+version:             0.1
 synopsis:            A library to generate REST-style webservices on top of scotty, handling all the boilerplate for you
 description:         
   An abstraction for 'Resource's that can support any number
@@ -21,7 +21,6 @@ maintainer:          alp@zalora.com
 copyright:           2014 Zalora SEA
 category:            Web
 build-type:          Simple
-extra-source-files:  example/items.hs
 cabal-version:       >=1.10
 
 library

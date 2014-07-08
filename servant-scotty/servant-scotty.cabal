@@ -1,5 +1,5 @@
 name:                servant-scotty
-version:             0.1.0.0
+version:             0.1
 synopsis:            Generate a web service for servant 'Resource's using scotty
 description:         Generate a web service for servant 'Resource's using scotty
 homepage:            http://github.com/zalora/servant
@@ -10,7 +10,6 @@ maintainer:          alp@zalora.com
 copyright:           2014 Zalora SEA
 category:            Web
 build-type:          Simple
--- extra-source-files:  
 cabal-version:       >=1.10
 
 library

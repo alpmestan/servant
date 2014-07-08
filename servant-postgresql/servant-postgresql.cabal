@@ -1,5 +1,5 @@
 name:                servant-postgresql
-version:             0.1.0.0
+version:             0.1
 synopsis:            Useful functions and instances for using servant with a PostgreSQL context
 description:         Useful functions and instances for using servant with a PostgreSQL context
 homepage:            http://github.com/zalora/servant-postgresql

@@ -1,5 +1,5 @@
 name:                servant-pool
-version:             0.1.0.0
+version:             0.1
 synopsis:            Utility functions for creating servant 'Context's with "context/connection pooling" support
 description:         Utility functions for creating servant 'Context's with "context/connection pooling" support
                      .
