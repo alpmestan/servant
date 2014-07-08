@@ -2,8 +2,25 @@
              TypeFamilies,
              MultiParamTypeClasses,
              OverloadedStrings #-}
+{- |
+Module      :  Servant.Scotty.Prelude
+Copyright   :  (c) Zalora SEA 2014
+License     :  BSD3
+Maintainer  :  Alp Mestanogullari <alp@zalora.com>
+Stability   :  experimental
 
-module Servant.Scotty.Prelude where
+Instances of 'ScottyOp' for the operations defined
+in "Servant.Prelude", along with some reusable types
+necessary for the instances.
+-}
+module Servant.Scotty.Prelude
+  ( -- * 'ScottyOp' class and standard operations
+    ScottyOp(..)
+  , module Servant.Prelude
+  , -- * Predefined response types
+    LookupResponse(..)
+  , UpdateResponse(..)
+  ) where
 
 import Control.Applicative
 import Data.Aeson
@@ -37,6 +54,9 @@ data UpdateResponse o =
                  }
   deriving (Eq, Show, Generic)
 
+-- | e.g:
+--
+-- > { "success" : false, "msg" : "couldn't add item: blabla"}
 instance ToJSON (UpdateResponse o) where
 
 -- | A generic response type for an operation performing
@@ -66,16 +86,27 @@ instance ToJSON a => ToJSON (LookupResponse a) where
   toJSON (Found x) = toJSON x
 
 -- | Make 'LookupResponse' a proper 'Response' for
---   'Service.Context.Context' lookups returning a 'Maybe' value
+--   'Service.Context.Context' lookups returning a 'Maybe' value,
+--   returning 404 when Nothing is returned, along with a not found
+--   message in json. Used by 'View'.
 instance ToJSON a => Response (LookupResponse a) (Maybe a) where
   toResponse Nothing  = (NotFound, status404)
   toResponse (Just v) = (Found v, status200)
 
 -- | Just send the list of entries as a JSON array,
---   with status code 200
+--   with status code 200. Used by 'ListAll'.
 instance ToJSON a => Response [a] [a] where
   toResponse list = (list, status200)
 
+-- | Generate a
+--
+--   > POST /:resourcename
+--
+--   handler for adding entries.
+--
+--   /Constraints on @a@, @i@ and @r@/:
+--
+--   > type Suitable Add a i r = (FromJSON a, Response (UpdateResponse Add) r)
 instance ScottyOp Add where
   type Suitable Add a i r =
     (FromJSON a, Response (UpdateResponse Add) r)
@@ -85,6 +116,15 @@ instance ScottyOp Add where
       result <- safely res $ op <$> js
       respond result
 
+-- | Generate a
+--
+--   > DELETE /:resourcename/<index specific stuffs>
+--
+--   handler for deleting entries.
+--
+--   /Constraints on @a@, @i@ and @r@/:
+--
+--   > type Suitable Delete a i r = (Index i, Response (UpdateResponse Delete) r)
 instance ScottyOp Delete where
   type Suitable Delete a i r =
     (Index i, Response (UpdateResponse Delete) r)
@@ -94,6 +134,15 @@ instance ScottyOp Delete where
       result <- safely res $ op <$> idx
       respond result
 
+-- | Generate a
+--
+--   > GET /:resourcename
+--
+--   handler for listing all entries.
+--
+--   /Constraints on @a@, @i@ and @r@/:
+--
+--   > type Suitable ListAll a i r = ToJSON a
 instance ScottyOp ListAll where
   type Suitable ListAll a i r = ToJSON a
 
@@ -102,6 +151,15 @@ instance ScottyOp ListAll where
       result <- safely res $ pure op
       respond result
 
+-- | Generate a
+--
+--   > PUT /:resourcename/<index specific stuffs>
+--
+--   handler for updating an entry.
+--
+--   /Constraints on @a@, @i@ and @r@/:
+--
+--   > type Suitable Update a i r = (Index i, FromJSON a, Response (UpdateResponse Update) r)
 instance ScottyOp Update where
   type Suitable Update a i r =
     (Index i, FromJSON a, Response (UpdateResponse Update) r)
@@ -111,6 +169,15 @@ instance ScottyOp Update where
       result <- safely res $ op <$> idx <*> js
       respond result
 
+-- | Generate a
+--
+--   > GET /:resourcename/<index specific stuffs>
+--
+--   handler for viewing an entry.
+--
+--   /Constraints on @a@, @i@ and @r@/:
+--
+--   > type Suitable View a i r = (Index i, ToJSON a)
 instance ScottyOp View where
   type Suitable View a i r =
     (Index i, ToJSON a)

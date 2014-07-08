@@ -14,7 +14,14 @@ License     :  BSD3
 Maintainer  :  Alp Mestanogullari <alp@zalora.com>
 Stability   :  experimental
 
-Some standard REST-y operations.
+Some standard REST-y operations your 'Resource's can
+support out of the box.
+
+Your type will have to implement a couple of class instances
+to be usable with a backend. For the scotty backend, this means
+having 'FromJSON' or 'ToJSON' instances and the appropriate
+'toResponse' implementations for the return types of your
+database.
 -}
 module Servant.Prelude where
 

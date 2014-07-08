@@ -8,8 +8,8 @@ Maintainer  :  Alp Mestanogullari <alp@zalora.com>
 Stability   :  experimental
 
 This module contains a generic 'Response' class for tying the result
-of some \"database computation\" to some response type of yours,
-or to some of the standard ones from "Servant.Scotty.Prelude".
+of some \"database operation\" to some response type of yours,
+or to the standard ones from "Servant.Scotty.Prelude".
 
 -}
 module Servant.Scotty.Response
