@@ -24,13 +24,11 @@ module Servant.Resource
   ( Contains
   , Resource
   , name
-  , keys
   , context
   , excCatcher
   , withHeadOperation
   , dropHeadOperation
   , mkResource
-  , identifiersAre
   , addOperation
   , Operation
   , (&)
@@ -80,8 +78,6 @@ type Contains (elem :: *) (list :: [*]) = False
 --     expected for the operations listed at the type-level.
 data Resource c a i r e (ops :: [*])
   = Resource { name       :: String    -- ^ Get the name of the 'Resource'
-             , keys       :: [String]  -- ^ Under what name(s) can we expect to see
-                                       --   the index or indices
              , context    :: Context c -- ^ Gives the 'Context' attached to this 'Resource'
              , excCatcher :: ExceptionCatcher e -- ^ Hands you the 'ExceptionCatcher' you can
                                                 --   'handledWith' with to make your \"database operations\"
@@ -135,19 +131,8 @@ dropHeadOperation r = r { operations = operations' }
 mkResource :: String
            -> Context c
            -> ExceptionCatcher e
-           -> Resource c a () r e '[]
-mkResource n ctx catcher = Resource n [] ctx catcher Nil
-
--- | What param name(s) should we look up in urls
---   for endpoints that require you to identify
---   a precise object. We support several identifiers
---   in case a particular entry can be identifier in several ways,
---   e.g by a token /or/ some entry id. In that case, you @i@ type
---   should be compatible with that.
-identifiersAre :: [String]
-               -> Resource c a i r e ops
-               -> Resource c a i r e ops
-identifiersAre ks r = r { keys = ks }
+           -> Resource c a i r e '[]
+mkResource n ctx catcher = Resource n ctx catcher Nil
 
 -- | Add an operation to a resource by specifying the \"database function\"
 --   that'll actually perform the lookup, update, listing, search and what not.
@@ -170,7 +155,7 @@ addOperation opfunc resource =
 --
 --   will result in:
 --
---   > [ c -> a -> IO r -- what 'Add' is replaced by
+--   > [ a -> c -> IO r -- what 'Add' is replaced by
 --   > , c -> IO [a]    -- what 'List' is replaced by
 --   > ]
 --
@@ -194,7 +179,7 @@ type instance Ops '[] c a i r = '[]
 --   \"connection type\" @c@ and a value to add, of type @a@. The result will
 --   be of type @IO r@. If we put this all together, we get:
 --
---   > type instance Operation Add c a i r = c -> a -> IO r
+--   > type instance Operation Add c a i r = a -> c -> IO r
 --
 --   Whereas for listing all entries ('ListAll'), we just want some kind
 --   of connection @c@ and we get back @[a]@.

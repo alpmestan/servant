@@ -28,7 +28,7 @@ library
   exposed-modules:
       Servant.Context
     , Servant.Error
-    , Servant.Operation
+    , Servant.Prelude
     , Servant.Resource
   build-depends:
     base >=4 && <5

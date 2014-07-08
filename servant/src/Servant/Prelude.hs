@@ -8,7 +8,7 @@
              FlexibleInstances,
              ScopedTypeVariables #-}
 {- |
-Module      :  Servant.Operation
+Module      :  Servant.Prelude
 Copyright   :  (c) Zalora SEA 2014
 License     :  BSD3
 Maintainer  :  Alp Mestanogullari <alp@zalora.com>
@@ -16,7 +16,7 @@ Stability   :  experimental
 
 Some standard REST-y operations.
 -}
-module Servant.Operation where
+module Servant.Prelude where
 
 import Servant.Resource
 
@@ -41,15 +41,15 @@ data View
 instance Show View where show _ = "View"
 
 -- | To 'Add' an entry, we require a function of type @c -> a -> IO r@.
-type instance Operation Add c a i r    = c      -> a -> IO r
+type instance Operation Add c a i r     =      a -> c -> IO r
 -- | To 'Delete' an entry, we require a function of type @c -> i -> IO r@.
-type instance Operation Delete c a i r = c -> i      -> IO r
+type instance Operation Delete c a i r  = i      -> c -> IO r
 -- | To 'List' all entries, we require a function of type @c -> IO [a]@.
-type instance Operation ListAll c a i r   = c           -> IO [a]
+type instance Operation ListAll c a i r =           c -> IO [a]
 -- | To 'Update' an entry, we require a function of type @c -> i -> a -> IO r@.
-type instance Operation Update c a i r = c -> i -> a -> IO r
+type instance Operation Update c a i r  = i -> a -> c -> IO r
 -- | To 'View' an entry, we require a function of type @c -> i -> IO (Maybe a)@.
-type instance Operation View c a i r   = c -> i      -> IO (Maybe a)
+type instance Operation View c a i r    = i      -> c -> IO (Maybe a)
 
 -- | Make a 'Resource' support the 'Add'
 --   operation by using your function.
@@ -63,7 +63,7 @@ type instance Operation View c a i r   = c -> i      -> IO (Maybe a)
 --   > mkResource "persons" postgresContext noErrorHandling
 --   >   & addWith addPerson
 addWith :: Contains Add ops ~ False
-        => (c -> a -> IO r)
+        => (a -> c -> IO r)
         -> Resource c a i r e ops
         -> Resource c a i r e (Add ': ops)
 addWith = addOperation
@@ -80,7 +80,7 @@ addWith = addOperation
 --   > mkResource "persons" postgresContext noErrorHandling
 --   >   & deleteWith addPerson
 deleteWith :: Contains Delete ops ~ False
-           => (c -> i -> IO r)
+           => (i -> c -> IO r)
            -> Resource c a i r e ops
            -> Resource c a i r e (Delete ': ops)
 deleteWith = addOperation
@@ -114,7 +114,7 @@ listAllWith = addOperation
 --   > mkResource "persons" postgresContext noErrorHandling
 --   >   & updateWith updatePerson
 updateWith :: Contains Update ops ~ False
-           => (c -> i -> a -> IO r)
+           => (i -> a -> c -> IO r)
            -> Resource c a i r e ops
            -> Resource c a i r e (Update ': ops)
 updateWith = addOperation
@@ -131,7 +131,7 @@ updateWith = addOperation
 --   > mkResource "persons" postgresContext noErrorHandling
 --   >   & viewWith viewPerson
 viewWith :: Contains View ops ~ False
-         => (c -> i -> IO (Maybe a))
+         => (i -> c -> IO (Maybe a))
          -> Resource c a i r e ops
          -> Resource c a i r e (View ': ops)
 viewWith = addOperation
