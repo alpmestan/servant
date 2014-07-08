@@ -51,7 +51,7 @@ port = 4321
 main :: IO ()
 main =
   -- the service will listen on port 4321
-  scotty 4321 (runResource personResource)
+  scotty port (runResource personResource)
 ```
 
 ## Extensibility
