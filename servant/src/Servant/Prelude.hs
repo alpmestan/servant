@@ -67,13 +67,13 @@ data View
 instance Show View where show _ = "View"
 
 -- | To 'Add' an entry, we require a function of type @c -> a -> IO r@.
-type instance Operation Add c a i r     =      a -> c -> IO r
+type instance Operation Add c a i r     =      a -> c -> IO (r Add)
 -- | To 'Delete' an entry, we require a function of type @c -> i -> IO r@.
-type instance Operation Delete c a i r  = i      -> c -> IO r
+type instance Operation Delete c a i r  = i      -> c -> IO (r Delete)
 -- | To 'List' all entries, we require a function of type @c -> IO [a]@.
 type instance Operation ListAll c a i r =           c -> IO [a]
 -- | To 'Update' an entry, we require a function of type @c -> i -> a -> IO r@.
-type instance Operation Update c a i r  = i -> a -> c -> IO r
+type instance Operation Update c a i r  = i -> a -> c -> IO (r Update)
 -- | To 'View' an entry, we require a function of type @c -> i -> IO (Maybe a)@.
 type instance Operation View c a i r    = i      -> c -> IO (Maybe a)
 
@@ -89,7 +89,7 @@ type instance Operation View c a i r    = i      -> c -> IO (Maybe a)
 --   > mkResource "persons" postgresContext noErrorHandling
 --   >   & addWith addPerson
 addWith :: Contains Add ops ~ False
-        => (a -> c -> IO r)
+        => (a -> c -> IO (r Add))
         -> Resource c a i r e ops
         -> Resource c a i r e (Add ': ops)
 addWith = addOperation
@@ -106,7 +106,7 @@ addWith = addOperation
 --   > mkResource "persons" postgresContext noErrorHandling
 --   >   & deleteWith addPerson
 deleteWith :: Contains Delete ops ~ False
-           => (i -> c -> IO r)
+           => (i -> c -> IO (r Delete))
            -> Resource c a i r e ops
            -> Resource c a i r e (Delete ': ops)
 deleteWith = addOperation
@@ -140,7 +140,7 @@ listAllWith = addOperation
 --   > mkResource "persons" postgresContext noErrorHandling
 --   >   & updateWith updatePerson
 updateWith :: Contains Update ops ~ False
-           => (i -> a -> c -> IO r)
+           => (i -> a -> c -> IO (r Update))
            -> Resource c a i r e ops
            -> Resource c a i r e (Update ': ops)
 updateWith = addOperation

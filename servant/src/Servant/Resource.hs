@@ -68,15 +68,15 @@ type Contains (elem :: *) (list :: [*]) = False
 --   * (optionally) supports indexing through the @i@ type (a dumb ID, or something like
 --     @data FooId = ByToken Token | ByID Integer@). That can be useful when trying to view,
 --     update or delete a particular entry, for example.
---   * uses @r@ as the return type for /effectful/ database operations (e.g. adding, updating, deleting entries
---     for example)
+--   * uses @r@ as the return type (tagged by the operation type) for /effectful/ database operations (e.g. adding, updating, deleting entries
+--     for example).
 --   * can catch exceptions, converting them to some error type
 --     @e@ of yours
 --   * supports the operations listed in the @ops@ type list. a corresponding
 --     (heterogeneous) list of "database functions" is held internally and we
 --     ask the compiler to make the types of these functions match with the ones
 --     expected for the operations listed at the type-level.
-data Resource c a i r e (ops :: [*])
+data Resource c a i (r :: * -> *) e (ops :: [*])
   = Resource { name       :: String    -- ^ Get the name of the 'Resource'
              , context    :: Context c -- ^ Gives the 'Context' attached to this 'Resource'
              , excCatcher :: ExceptionCatcher e -- ^ Hands you the 'ExceptionCatcher' you can
@@ -168,7 +168,7 @@ addOperation opfunc resource =
 --   That means we can't magically convert a 'Resource' into one that supports one more
 --   operations without registering a function for it (which /must have/ the right type,
 --   or your code won't compile.
-type family Ops (ops :: [*]) c a i r :: [*]
+type family Ops (ops :: [*]) c a i (r :: * -> *) :: [*]
 type instance Ops (o ': ops) c a i r = Operation o c a i r ': Ops ops c a i r
 type instance Ops '[] c a i r = '[]
 
@@ -185,7 +185,7 @@ type instance Ops '[] c a i r = '[]
 --   of connection @c@ and we get back @[a]@.
 --
 --   > type instance Operation ListAll c a i r = c -> IO [a]
-type family Operation o c a i r :: *
+type family Operation o c a i (r :: * -> *) :: *
 
 -- | Reversed function application.
 --
