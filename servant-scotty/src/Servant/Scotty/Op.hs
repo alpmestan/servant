@@ -51,7 +51,7 @@ class ScottyOp o where
   --   satisfy the constraints /specified/ by the operations your 'Resource'
   --   carries, not some global dumb constraints you have to pay for even if
   --   you don't care about the operation that requires this constraint.
-  type Suitable o a i r :: Constraint
+  type Suitable o a i (r :: * -> *) :: Constraint
 
   -- | Given a 'Resource' and the \"database function\" (so to speak)
   --   corresponding to your operation, do some business in /scotty/'s

@@ -82,6 +82,6 @@ instance (ScottyOp o, Runnable ops) => Runnable (o ': ops) where
     withHeadOperation r runOperation
     runResource (dropHeadOperation r)
 
-type family Suitables (ops :: [*]) a i r :: Constraint
+type family Suitables (ops :: [*]) a i (r :: * -> *) :: Constraint
 type instance Suitables '[] a i r = ()
 type instance Suitables (o ': ops) a i r = (Suitable o a i r, Suitables ops a i r)
