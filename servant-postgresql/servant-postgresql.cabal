@@ -13,11 +13,12 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  exposed-modules:     Servant.Context.PostgreSQL
+  exposed-modules:     Servant.Context.PostgreSQL, Servant.PostgreSQL.Prelude
   build-depends:       
       base >=4 && <5
     , servant >= 0.1
     , servant-pool >= 0.1
+    , servant-response >= 0.1
     , postgresql-simple >= 0.4
     , bytestring >= 0.7
   hs-source-dirs:      src
