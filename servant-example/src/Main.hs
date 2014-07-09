@@ -8,7 +8,7 @@ import Data.Int
 import Data.Monoid
 import Database.PostgreSQL.Simple (Connection)
 import Servant.Error
-import Servant.Context.PostgreSQL
+import Servant.PostgreSQL.Prelude
 import Servant.Scotty
 import Servant.Scotty.Prelude
 import Web.Scotty.Trans
@@ -29,12 +29,13 @@ users :: Context Connection
       -> Resource Connection
                   User
                   Email
-                  Int64
+                  PGResult
                   ServiceError
-                  '[ListAll, Add]
+                  '[ListAll, Delete, Add]
 users ctx =
   mkResource "users" ctx exceptions
     & addWith     addUser
+    & deleteWith  deleteUser
     & listAllWith listUsers
 
   where exceptions = sqlerrorCatcher <> violationsCatcher
@@ -46,11 +47,3 @@ getContext =
                          100 -- max. 100 open resources per sub-pool
                          connstring
   where connstring = "host=localhost user=alp"
-
-instance Response (UpdateResponse Add) Int64 where
-  toResponse n = (resp, statuscode)
-    where resp = UpdateResponse successful err
-          successful = n > 0
-          err = if n > 0 then "" else "no affected row"
-          statuscode = if n > 0 then status201 else status400
-

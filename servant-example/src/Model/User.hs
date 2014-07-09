@@ -4,12 +4,11 @@ module Model.User where
 import Control.Applicative
 import GHC.Generics
 import Data.Aeson
-import Data.Int
 import Data.Text (Text)
 import Database.PostgreSQL.Simple
 import Database.PostgreSQL.Simple.FromRow
-import Servant.Scotty.Arguments
-import Web.Scotty.Trans
+import Servant.PostgreSQL.Prelude
+import Servant.Scotty.Prelude
 
 type Email = Text
 
@@ -29,10 +28,14 @@ instance FromRow User where
 instance ToJSON User where
 instance FromJSON User where
 
-addUser :: User -> Connection -> IO Int64
-addUser user conn =
+addUser :: User -> Connection -> IO (PGResult Add)
+addUser user conn = toPGResult $
   execute conn "insert into users(email, karma) values (?, ?)"
                (email user, karma user)
+
+deleteUser :: Email -> Connection -> IO (PGResult Delete)
+deleteUser email conn = toPGResult $
+  execute conn "delete from users where email = ?" (Only email)
 
 listUsers :: Connection -> IO [User]
 listUsers conn =
