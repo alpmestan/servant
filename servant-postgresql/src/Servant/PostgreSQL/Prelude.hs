@@ -15,11 +15,17 @@ the instances defined in this module.
 -}
 module Servant.PostgreSQL.Prelude
   ( PGResult
+  , ToPGResult(..)
   , toPGResult
+  , pgresultOfInts
+  , pgresultOfInt64
   , module Servant.Context.PostgreSQL
   ) where
 
+import Data.Foldable
 import Data.Int
+import Data.Monoid
+import Database.PostgreSQL.Simple
 import Servant.Context.PostgreSQL
 import Servant.Prelude
 import Servant.Response.Prelude
@@ -37,9 +43,29 @@ import Servant.Response.Prelude
 newtype PGResult o = PGResult { pgres :: Int64 }
   deriving (Eq, Ord, Num, Show)
 
--- | Convert an 'Int64' to a 'PGResult'
-toPGResult :: IO Int64 -> IO (PGResult o)
-toPGResult = fmap PGResult
+-- | Run a database action and convert its
+--   result to a 'PGResult'.
+--
+--   This will only typecheck on queries that
+--   return 'Int64' or @['Only' 'Int']@.
+toPGResult :: ToPGResult r => IO r -> IO (PGResult o)
+toPGResult = fmap fromRes
+
+pgresultOfInts :: IO [Only Int] -> IO (PGResult o)
+pgresultOfInts = toPGResult
+
+pgresultOfInt64 :: IO Int64 -> IO (PGResult o)
+pgresultOfInt64 = toPGResult
+
+class ToPGResult r where
+  fromRes :: r -> PGResult o
+
+instance ToPGResult Int64 where
+  fromRes = PGResult
+
+instance ToPGResult [Only Int] where
+  fromRes ns = PGResult n
+    where n = getSum $ foldMap (Sum . fromIntegral . fromOnly) ns
 
 -- | If the 'Int64' is smaller than 1, status 400 and a
 --   suitable error message. Status 201 and empty message otherwise.
@@ -59,7 +85,7 @@ instance Response (UpdateResponse Delete) (PGResult Delete) where
     where response   = UpdateResponse successful msg
           successful = n > 0
           msg        = if successful then "" else "couldn't delete: target entry doesn't exist"
-          statuscode = if successful then status200 else status400
+          statuscode = if successful then status200 else status404
 
 -- | If the 'Int64' is smaller than 1, status 400 and a
 --   suitable error message. Status200 and empty message otherwise.
@@ -69,4 +95,4 @@ instance Response (UpdateResponse Update) (PGResult Update) where
     where response   = UpdateResponse successful msg
           successful = n > 0
           msg        = if successful then "" else "couldn't update: target entry doesn't exist"
-          statuscode = if successful then status200 else status400
+          statuscode = if successful then status200 else status404

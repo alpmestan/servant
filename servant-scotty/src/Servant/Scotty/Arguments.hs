@@ -18,6 +18,7 @@ module Servant.Scotty.Arguments
   , FromJSON
   ) where
 
+import Control.Applicative
 import Control.Monad.IO.Class
 import Data.Aeson (FromJSON)
 import Servant.Resource
@@ -40,7 +41,7 @@ import Web.Scotty.Trans
 --     to generate the beginning of the path.
 class Index k where
   -- | Lookup the index in the request path
-  idx :: (MonadIO m, ScottyError e)
+  idx :: (Functor m, MonadIO m, ScottyError e)
       => ActionT e m k
 
   -- | String to 'capture' that represents the
