@@ -26,7 +26,7 @@ where `runResource` translates what looks like some kind of DSL for describing r
 these `Users.add`, `Users.listAll` and `Users.view` functions, which here could look like:
 
 ``` haskell
-add :: User -> Connection -> IO Int64
+add :: User -> Connection -> IO (PGResult Add)
 listAll :: Connection -> IO [User]
 view :: UserId -> Connection -> IO (Maybe User)
 ```
@@ -84,7 +84,7 @@ Aside from the unusual number of type variables (which however *is* necessary he
 
 ### Creating "an empty `Resource`"
 
-There's only one way to create a `Resource` to which you can support for some operations later on: `mkResource`.
+There's only one way to create a `Resource` (to which you can add support for some operations later on): `mkResource`.
 
 ``` haskell
 mkResource :: String
@@ -94,3 +94,82 @@ mkResource :: String
 ```
 
 It creates a resource that supports no operation at all. Just give it a name, some context and a list of exceptions to watch for (or none at all), and it'll be ready to receive support for operations later on.
+
+### Operations
+
+I've been talking about operations so far without saying much about them, except that at its core an operation is juste a type, which usually is empty. The standard operations provided by *servant* actually **are** empty types:
+
+``` haskell
+data Add
+data Delete
+data ListAll
+data Update
+data View
+```
+
+These are only going to be used in servant's type-level manipulations and lets one define some associated information to an operation. The first instance of "associated information" you'll encounter is:
+
+``` haskell
+type family Operation o c a i (r :: * -> *) :: *
+```
+
+An important thing to understand in servant is that for a given operation (let's say `Add`), you are forced to provide a "database operation" of a precise type, which can be a mix of the context type, the type of entries managed by the resource, the type by which our entries are indexed, and the return type of effectful database operations (think add, update, delete) `r` tagged by the operation type. For `Add` we have this instance:
+
+``` haskell
+type instance Operation Add c a i r = a -> c -> IO (r Add)
+```
+
+Which means if you want to use `addWith` for your precise type of entries, you have to provide `addWith` with a function that looks like this, replacing `a` by the type of your entries, `c` by your "connection type", and `r` by `PGResult` from *servant-postgresql*, for example.
+
+Likewise, we have:
+
+``` haskell
+type instance Operation Delete c a i r  = i      -> c -> IO (r Delete)
+type instance Operation ListAll c a i r =           c -> IO [a]
+type instance Operation Update c a i r  = i -> a -> c -> IO (r Update)
+type instance Operation View c a i r    = i      -> c -> IO (Maybe a)
+```
+
+Equipped with what we've covered so far, we can define a `Resource` like the following:
+
+``` haskell
+-- with:
+-- * add :: User -> Connection -> IO (PGResult Add)
+-- * listAll :: Connection -> IO [User]
+-- * view :: UserId -> Connection -> IO (Maybe User)
+
+-- noCatch just doesn't watch for any exception
+-- pgsqlcontext is something you can easily define
+--   using servant-postgresql,
+mkResource "users" pgsqlcontext noCatch
+  & addWith Users.add
+  & listAllWith Users.listAll
+  & viewWith Users.view
+```
+
+should make a bit more sense. (By the way, `(&)` is just reversed function application: `x & f = f x`.)
+
+In particular, we see that our `add`, `listAll` and `view` functions indeed conform to the shape expected by the respective instances of the `Operation` type family.
+
+And... I'll be honest with you. `addWith`, `viewWith` and friends actually are all just one, identical function in disguise: `addOperation` from `Servant.Resource`.
+
+``` haskell
+-- | Add an operation to a resource by specifying the \"database function\"
+--   that'll actually perform the lookup, update, listing, search and what not.
+--
+--   We statically enforce that the operation we're adding isn't
+--   already supported by the 'Resource', when built with @ghc >= 7.8@.
+addOperation :: Contains o ops ~ False
+             => Operation o c a i r 
+             -> Resource c a i r e ops 
+             -> Resource c a i r e (o ': ops)
+addOperation opfunc resource =
+  resource { operations = Cons opfunc (operations resource) }
+```
+
+So if you define your own operations, e.g `Search`, you could just have `searchWith = addOperation` but refining the type by forcing `o` to be `Search` in the signature of `searchWith`, and then you could do
+
+``` haskell
+mkResource "users" pgcontext noCatch
+  & searchWith somefunction
+```
