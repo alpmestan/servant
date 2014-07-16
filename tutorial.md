@@ -78,6 +78,19 @@ data Resource c a i (r :: * -> *) e (ops :: [*])
 Aside from the unusual number of type variables (which however *is* necessary here, we get used to it quite quickly don't worry), the only "tricky" thing here is that `operations` heterogeneous list field.
 
 - The `name` field (accessor) is useful when generating endpoints, is used in the `Show` instance for `Resource` and can be useful for anything you like.
-- The `context` wraps a function that lets you operate on some "database connection"-ish thing of type `c`, i.e something with type `forall r. (c -> IO r) -> IO r`. Think of it as a `withConnection` function if you want. See `Servant.Context` in the *servant* package to see how one should be used and how to create your own contexts. The *servant-pool* and *servant-postgresql* packages provide some helper functions for creating `Context`s that respectively use [pooling](http://hackage.haskell.org/package/resource-pool) and [postgresql](http://hackage.haskell.org/package/postgresql-simple).
-- `excCatcher` is basically a list of functions, where each function has type `except -> e` for some `except` type that's an instance of the `Exception` class from `Control.Exception`. The `Servant.Error` module contains functions to create and combine catchers together. The idea is that we can catch (if one arises) exceptions for every `except` type represented in this list and then convert the exception value to our `Resource`'s error type `e`. You can then use that value in your web-service to report errors appropriately using a customer `defaultHandler` in scotty for example.
+- The `context` wraps a function that lets you operate on some "database connection"-ish thing of type `c`, i.e something with type `forall r. (c -> IO r) -> IO r`. Think of it as a `withConnection` function where we've already specified how we get our hand on the `Connection`, if you want. See `Servant.Context` in the *servant* package to see how one should be used and how to create your own contexts. The *servant-pool* and *servant-postgresql* packages provide some helper functions for creating `Context`s that respectively use [pooling](http://hackage.haskell.org/package/resource-pool) and [postgresql](http://hackage.haskell.org/package/postgresql-simple).
+- `excCatcher` is basically a list of functions, where each function has type `except -> e` for some `except` type that's an instance of the `Exception` class from `Control.Exception`. The `Servant.Error` module contains functions to create and combine catchers together. The idea is that we can catch exceptions (if one arises) for every `except` type represented in this list and then convert the exception value to our `Resource`'s error type `e`. You can then use that value in your web-service to report errors appropriately using a custom `defaultHandler` in scotty for example.
 - `operations` is a list of functions that have different types. Every time we add support for some operation on our `Resource`, using functions like `addWith`, `listAllWith` or `updateWith` above, we add the specified function in this list (`Users.add`, `Users.listAll`, `Users.update` in our example above) and the corresponding operation type (`Add`, `ListAll`, `Update` in our example), which is really only meant to be used at the type-level and shouldn't actually contain anything, gets added to the type-level list `ops`. The type of the `operations` field may look a bit scary but this is just for enforcing that the list of functions matches the expected types for the corresponding operations.
+
+### Creating "an empty `Resource`"
+
+There's only one way to create a `Resource` to which you can support for some operations later on: `mkResource`.
+
+``` haskell
+mkResource :: String
+           -> Context c
+           -> ExceptionCatcher e
+           -> Resource c a i r e '[]
+```
+
+It creates a resource that supports no operation at all. Just give it a name, some context and a list of exceptions to watch for (or none at all), and it'll be ready to receive support for operations later on.

@@ -16,13 +16,10 @@ License     :  BSD3
 Maintainer  :  Alp Mestanogullari <alp@zalora.com>
 Stability   :  experimental
 
-Module for defining 'Resource's.
-
-> EXAMPLE HERE
+Defining 'Resource's.
 -}
 module Servant.Resource
-  ( Contains
-  , Resource
+  ( Resource
   , name
   , context
   , excCatcher
@@ -177,9 +174,9 @@ type instance Ops '[] c a i r = '[]
 --
 --   For instance, if we look at 'Add', we know that we'll need our
 --   \"connection type\" @c@ and a value to add, of type @a@. The result will
---   be of type @IO r@. If we put this all together, we get:
+--   be of type @IO (r Add)@. If we put this all together, we get:
 --
---   > type instance Operation Add c a i r = a -> c -> IO r
+--   > type instance Operation Add c a i r = a -> c -> IO (r Add)
 --
 --   Whereas for listing all entries ('ListAll'), we just want some kind
 --   of connection @c@ and we get back @[a]@.
