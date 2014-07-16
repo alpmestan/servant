@@ -39,13 +39,15 @@ And we came up with a solution for this. The rest of this tutorial describes how
 
 # Hello servant
 
-Alright, let's get started by taking a look at the servant packages and see what each one of them brings to the table.
+Alright, let's get started by taking a look at the servant packages and seeing what each one of them brings to the table.
 
 ## servant
 
 The `servant` package contains the core types and functions to let you describe a `Resource` just from the actual database operations, like our `add`, `listAll` and `update` functions above, and a couple of other necessary details.
 
-One of the things it defines is the `Resource` type, which carries the resource description.
+### The `Resource` type
+
+One of the things it defines is the `Resource` type, which carries all the necessary information to fully describe a `Resource` so that it can later be "interpreted" in some web framework or in another way, e.g for generating docs (I've already planned to work on this). From the code itself:
 
 ``` haskell
 -- | A resource that:
@@ -64,12 +66,18 @@ One of the things it defines is the `Resource` type, which carries the resource 
 --     ask the compiler to make the types of these functions match with the ones
 --     expected for the operations listed at the type-level.
 data Resource c a i (r :: * -> *) e (ops :: [*])
-  = Resource { name       :: String    -- ^ Get the name of the 'Resource'
-             , context    :: Context c -- ^ Gives the 'Context' attached to this 'Resource'
+  = Resource { name       :: String    -- ^ Name of the 'Resource'
+             , context    :: Context c -- ^ 'Context' attached to this 'Resource'
              , excCatcher :: ExceptionCatcher e -- ^ Hands you the 'ExceptionCatcher' you can call
                                                 --   'handledWith' with to make your \"database operations\"
                                                 --   exception safe.
              , operations :: HList (Ops ops c a i r)
              }
-
 ```
+
+Aside from the unusual number of type variables (which however *is* necessary here, we get used to it quite quickly don't worry), the only "tricky" thing here is that `operations` heterogeneous list field.
+
+- The `name` field (accessor) is useful when generating endpoints, is used in the `Show` instance for `Resource` and can be useful for anything you like.
+- The `context` wraps a function that lets you operate on some "database connection"-ish thing of type `c`, i.e something with type `forall r. (c -> IO r) -> IO r`. Think of it as a `withConnection` function if you want. See `Servant.Context` in the *servant* package to see how one should be used and how to create your own contexts. The *servant-pool* and *servant-postgresql* packages provide some helper functions for creating `Context`s that respectively use [pooling](http://hackage.haskell.org/package/resource-pool) and [postgresql](http://hackage.haskell.org/package/postgresql-simple).
+- `excCatcher` is basically a list of functions, where each function has type `except -> e` for some `except` type that's an instance of the `Exception` class from `Control.Exception`. The `Servant.Error` module contains functions to create and combine catchers together. The idea is that we can catch (if one arises) exceptions for every `except` type represented in this list and then convert the exception value to our `Resource`'s error type `e`. You can then use that value in your web-service to report errors appropriately using a customer `defaultHandler` in scotty for example.
+- `operations` is a list of functions that have different types. Every time we add support for some operation on our `Resource`, using functions like `addWith`, `listAllWith` or `updateWith` above, we add the specified function in this list (`Users.add`, `Users.listAll`, `Users.update` in our example above) and the corresponding operation type (`Add`, `ListAll`, `Update` in our example), which is really only meant to be used at the type-level and shouldn't actually contain anything, gets added to the type-level list `ops`. The type of the `operations` field may look a bit scary but this is just for enforcing that the list of functions matches the expected types for the corresponding operations.
