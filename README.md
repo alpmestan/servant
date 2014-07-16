@@ -77,4 +77,5 @@ or for individual packages:
 - [servant](http://alpmestan.com/servant/servant/)
 - [servant-pool](http://alpmestan.com/servant/servant-pool/)
 - [servant-postgresql](http://alpmestan.com/servant/servant-postgresql/)
+- [servant-response](http://alpmestan.com/servant/servant-response/)
 - [servant-scotty](http://alpmestan.com/servant/servant-scotty/)
