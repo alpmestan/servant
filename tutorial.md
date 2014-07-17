@@ -113,7 +113,7 @@ These are only going to be used in servant's type-level manipulations and lets o
 type family Operation o c a i (r :: * -> *) :: *
 ```
 
-An important thing to understand in servant is that for a given operation (let's say `Add`), you are forced to provide a "database operation" of a precise type, which can be a mix of the context type, the type of entries managed by the resource, the type by which our entries are indexed, and the return type of effectful database operations (think add, update, delete) `r` tagged by the operation type. For `Add` we have this instance:
+An important thing to understand in servant is that for a given operation (let's say `Add`), you are forced to provide a "database operation" of a precise type, which can be a mix of the context type, the type of entries managed by the resource, the type by which our entries are indexed, the return type of effectful database operations (think add, update, delete) `r` tagged by the operation type, or any concrete type you want (a timestamp argument, some text, really anything you want). For `Add` we have this instance:
 
 ``` haskell
 type instance Operation Add c a i r = a -> c -> IO (r Add)
@@ -167,9 +167,31 @@ addOperation opfunc resource =
   resource { operations = Cons opfunc (operations resource) }
 ```
 
-So if you define your own operations, e.g `Search`, you could just have `searchWith = addOperation` but refining the type by forcing `o` to be `Search` in the signature of `searchWith`, and then you could do
+So if you define your own operations, e.g `Search`, you could just have `searchWith = addOperation` but refining the type by forcing `o` to be `Search` in the signature of `searchWith` and by replacing `Operation Search c a i r` by what it actually is. This all could look like:
+
+``` haskell
+data Search
+
+type instance Operation Search c a i r =
+  SearchQuery -> c -> IO (SearchResult a)
+
+-- a search query
+type SearchQuery = Text
+
+-- an item and its "score" for the search
+data SearchResult a = SR !Double a
+
+searchWith :: Contains Search ops ~ False
+           => (SearchQuery -> c -> IO (SearchResult a))
+           -> Resource c a i r ops
+           -> Resource c a i r (Search ': ops)
+```
+
+And then you could do
 
 ``` haskell
 mkResource "users" pgcontext noCatch
   & searchWith somefunction
 ```
+
+provided `somefunction` has the appropriate type (`SearchQuery -> c -> IO (SearchResult a)`).
