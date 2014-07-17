@@ -97,7 +97,7 @@ It creates a resource that supports no operation at all. Just give it a name, so
 
 ### Operations
 
-I've been talking about operations so far without saying much about them, except that at its core an operation is juste a type, which usually is empty. The standard operations provided by *servant* actually **are** empty types:
+I've been talking about operations so far without saying much about them, except that at its core an operation is juste a type, which usually is empty. The standard operations provided by *servant* (in `Servant.Prelude`) actually **are** empty types:
 
 ``` haskell
 data Add
@@ -318,7 +318,8 @@ runOperation resource op =
   --    /<resource name> on GET requests
   get (capture $ "/" ++ name res) $ do
     -- 2/ safely runs an operation using the resource's context
-    --    catching potential exceptions and turning them in your error type.
+    --    catching potential exceptions and turning them in your error type,
+    --    then 'raise'-ing the error for your defaultHandler to... handle it.
     --    Why not just 'safely res op'? Because in other cases, we want to
     --    fetch the operation's arguments from the url or from the request
     --    body (which servant-scotty provides helpers for), so 'safely' takes
@@ -334,3 +335,5 @@ runOperation resource op =
     --    requires precisely this! :-)
     respond result
 ```
+
+And we're done. Now any `Resource` with a list-all operation can see that operation be turned into an endpoint that sends back the list of all entries in JSON. Note that this instance is already provided by *servant-scotty*, in `Servant.Scotty.Prelude`.
