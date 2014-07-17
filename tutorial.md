@@ -147,9 +147,17 @@ mkResource "users" pgsqlcontext noCatch
   & viewWith Users.view
 ```
 
-should make a bit more sense. (By the way, `(&)` is just reversed function application: `x & f = f x`.)
+And this should make a bit more sense than at the beginning of this article. (By the way, `(&)` is just reversed function application: `x & f = f x`.)
 
 In particular, we see that our `add`, `listAll` and `view` functions indeed conform to the shape expected by the respective instances of the `Operation` type family.
+
+Now, what type does this `Resource` have? Some type variables become concrete right from the start when calling `mkResource`, and some others only later, when adding support for operations.
+
+- `c` and `e` from `Resource c a i r e ops` become fixed, concrete types when feeding `mkResource` with the context and the exceptions catcher.
+- `a`, `i`, `r` become concrete types only when you add support for an operation that **actually** uses them, in their `Operation` instance.
+- `ops` is deduced by looking at the final list of operations we've provided support for.
+
+When we put this all together, we can deduce the type of our `"users"` resource to be `Resource Connection User UserId PGResult e [View, ListAll, Add]`. We're still polymorphic in the error type because our list of "catchers" is empty.
 
 And... I'll be honest with you. `addWith`, `viewWith` and friends actually are all just one, identical function in disguise: `addOperation` from `Servant.Resource`.
 
@@ -181,17 +189,29 @@ type SearchQuery = Text
 -- an item and its "score" for the search
 data SearchResult a = SR !Double a
 
+-- we restrict the type of addOperation manually
+-- but the implementation is really the same.
 searchWith :: Contains Search ops ~ False
            => (SearchQuery -> c -> IO (SearchResult a))
            -> Resource c a i r ops
            -> Resource c a i r (Search ': ops)
+searchWith = addOperation -- no need to think here. this just works.
 ```
 
 And then you could do
 
 ``` haskell
 mkResource "users" pgcontext noCatch
+  -- ...
   & searchWith somefunction
 ```
 
-provided `somefunction` has the appropriate type (`SearchQuery -> c -> IO (SearchResult a)`).
+provided `somefunction` has the appropriate type (`SearchQuery -> c -> IO (SearchResult a)`). This is really what defining a new "abstract" operation is all about in servant.
+
+### Abstract... ?
+
+Yes, so far we've seen how to describe resources, but we haven't really covered how to run them. There was this `runResource` thing at the beginning of the tutorial -- what is that? where does it live?
+
+The answer is that a `Resource` is just a description, which means we yet have to "build something real" from it, something we can run, of particular relevance would be to be able to run it inside a web-service. And that's what `servant-scotty` is about.
+
+## servant-scotty
