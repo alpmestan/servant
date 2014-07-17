@@ -202,7 +202,7 @@ And then you could do
 
 ``` haskell
 mkResource "users" pgcontext noCatch
-  -- ...
+  -- ... some other operations ...
   & searchWith somefunction
 ```
 
@@ -215,3 +215,17 @@ Yes, so far we've seen how to describe resources, but we haven't really covered 
 The answer is that a `Resource` is just a description, which means we yet have to "build something real" from it, something we can run, of particular relevance would be to be able to run it inside a web-service. And that's what `servant-scotty` is about.
 
 ## servant-scotty
+
+We have defined a toy-resource, `"users"`. What now? Well, like I said at the beginning, we use [scotty](http://hackage.haskell.org/package/scotty) a lot at [Zalora](http://github.com/zalora) so right now the only way to "make a resource damn real for a moment" is to generate a scotty web-service from the decsription using the *servant-scotty* package, and in particular by importing the `Servant.Scotty.Prelude` module.
+
+### Running a `Resource`
+
+What should the meaning of "running a resource" be? *servant-scotty*'s take on that is: generate one (or more) endpoints for *every operation your `Resource` supports*.
+
+More concretely, `Servant.Scotty` exports a `runResource` function which will set up endpoints for your operations. If you call `runResource` on a resource with an empty list of operation, it won't set up any endpoint. If you call `runResource` on a list of the form `o ': ops`, it will set up stuffs for `o` and then move on with the rest of the operations (`ops`).
+
+But what does "set up stuffs for `o`" mean? Well, it depends on what `o` is, of course! If we want to list all our users for example, this should mean setting up a `get "/users"` endpoint that would use `Users.listAll` to get all users and e.g rely on a `ToJSON` instance being there to turn this user list into a JSON array of users in JSON format.
+
+This was just an example, but it demonstrates that running a resource amounts to running something for each operation. And that each operation has to specify *how it should be translated in terms that scotty can understand*. And this is exactly what the `ScottyOp` class (from `Servant.Scotty.Op`) captures, so let's take some time to get familiar with it.
+
+### Running an operation: `ScottyOp`
