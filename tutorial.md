@@ -222,10 +222,115 @@ We have defined a toy-resource, `"users"`. What now? Well, like I said at the be
 
 What should the meaning of "running a resource" be? *servant-scotty*'s take on that is: generate one (or more) endpoints for *every operation your `Resource` supports*.
 
-More concretely, `Servant.Scotty` exports a `runResource` function which will set up endpoints for your operations. If you call `runResource` on a resource with an empty list of operation, it won't set up any endpoint. If you call `runResource` on a list of the form `o ': ops`, it will set up stuffs for `o` and then move on with the rest of the operations (`ops`).
+More concretely, `Servant.Scotty` exports a `runResource` function which will set up endpoints for your operations. If you call `runResource` on a resource with an empty list of operation, it won't set up any endpoint. If you call `runResource` on a list of the form `o ': ops`, it will set up stuffs for `o` and then move on with the rest of the operations (`ops`). We have a class that drives this type-level recursion for us: `Runnable`, of which `runResource` is a member.
 
-But what does "set up stuffs for `o`" mean? Well, it depends on what `o` is, of course! If we want to list all our users for example, this should mean setting up a `get "/users"` endpoint that would use `Users.listAll` to get all users and e.g rely on a `ToJSON` instance being there to turn this user list into a JSON array of users in JSON format.
+``` haskell
+class Runnable ops where
+  -- | Call this function to setup a 'Resource' in your
+  --   scotty application.
+  runResource :: {- some constraints ... -}
+              => Resource c a i r e ops
+              -> ScottyT e m ()
+```
+
+And we have instances of `Runnable` that will do the right thing and will only trigger if you've defined how to interpret each operation properly.
+
+But what do "set up stuffs for `o`" or (equivalently) "interpret each operation" mean? Well, it depends on what `o` is, of course! If we want to list all our users for example, this should mean setting up a `get "/users"` endpoint that would use `Users.listAll` to get all users and e.g rely on a `ToJSON User` instance being there to turn this user list into a JSON array of users in JSON format.
 
 This was just an example, but it demonstrates that running a resource amounts to running something for each operation. And that each operation has to specify *how it should be translated in terms that scotty can understand*. And this is exactly what the `ScottyOp` class (from `Servant.Scotty.Op`) captures, so let's take some time to get familiar with it.
 
 ### Running an operation: `ScottyOp`
+
+Well, what better way to tackle this is there than looking at the code for `ScottyOp`.
+
+``` haskell
+-- | A class that lets you define one or more handler(s) for an operation @o@.
+class ScottyOp o where
+  -- | Each operation can define its own constraints on:
+  --
+  --   * the type of the entries, @a@
+  --   * the type by which the entries are indexed, @i@
+  --   * the result type @r@ of \"effectful\" database operations
+  --     (those that add/update/delete entries)
+  --
+  --   This is useful because that way, your types will /only/ have to
+  --   satisfy the constraints /specified/ by the operations your 'Resource'
+  --   carries, not some global dumb constraints you have to pay for even if
+  --   you don't care about the operation that requires this constraint.
+  type Suitable o a i (r :: * -> *) :: Constraint
+
+  -- | Given a 'Resource' and the \"database function\" (so to speak)
+  --   corresponding to your operation, do some business in /scotty/'s
+  --   'ScottyT' and 'ActionT' monads to define a handler for this very operation.
+  --
+  --   To provide the \"database function\" with some 'Context' @c@
+  --   you can use 'Servant.Context.withContext' to run the operation
+  --   and 'Servant.Resource.context' to get the context of your 'Resource'.
+  --
+  --   To catch exceptions around your db operation in your handler,
+  --   you can use the 'Servant.Resource.excCatcher' getter to access the
+  --   'Servant.Error.ExceptionCatcher' of your 'Resource' and
+  --   'Servant.Error.handledWith' to catch them and convert them
+  --   to your error type @e@. You can then 'raise' the error value
+  --   if you have a sensible default handler or handle it locally and
+  --   respond with whatever is appropriate in your case.
+  runOperation :: (Functor m, MonadIO m, ScottyError e, Suitable o a i r)
+               => Resource c a i r e (o ': ops)
+               -> Operation o c a i r
+               -> ScottyT e m ()
+```
+
+Alright, so first, we see that to define an instance of `ScottyOp`, we have to give an instance of `Suitable` for our operation, and that the result should be a [`Constraint`](https://www.haskell.org/ghc/docs/latest/html/users_guide/constraint-kind.html). Hmm...
+
+Let's use our "list all" example again. If we were to define a scotty action triggered when someone issues a *GET* request to `/users` (or any other resource supporting the "list all" operation -- an operation doesn't, can't and shouldn't care about the concrete types of entries and index it deals with: it's really meant to synthesize some general pattern resulting from a mix of getting stuffs from the url, the request body, doing something with these, and then turning them back into a some appropriate response) that would do what we described above, there's just one thing we need, and we've already mentionned it: a `ToJSON` instance for the `a` type. So we could start writing an instance for `ListAll` right now:
+
+``` haskell
+instance ScottyOp ListAll where
+  type Suitable ListAll a i r = ToJSON a
+  -- ... to be continued ...
+```
+
+We're not indexing any entry here in the URL or something, so we don't care about some index of type `i` being fetchable from somewhere, and getting a listing isn't "an effectful operation", i.e one that modifies something in "the database", so we don't care about `r` either. All we need is that `ToJSON` instance, really.
+
+Now we have to define a `runOperation` for the `ListAll` operation. When considered with `o = ListAll`, `runOperation`'s signature:
+
+``` haskell
+runOperation :: (Functor m, MonadIO m, ScottyError e, Suitable o a i r)
+             => Resource c a i r e (o : ops)
+             -> Operation o c a i r
+             -> ScottyT e m ()
+```
+
+becomes
+
+``` haskell
+runOperation :: (Functor m, MonadIO m, ScottyError e, ToJSON a)
+             => Resource c a i r e (ListAll : ops)
+             -> (c -> IO [a])
+             -> ScottyT e m ()
+```
+
+Well, that definitely seems doable now!
+
+``` haskell
+runOperation resource op =
+  -- 1/ whatever our resource is, the listing will happen at
+  --    /<resource name> on GET requests
+  get (capture $ "/" ++ name res) $ do
+    -- 2/ safely runs an operation using the resource's context
+    --    catching potential exceptions and turning them in your error type.
+    --    Why not just 'safely res op'? Because in other cases, we want to
+    --    fetch the operation's arguments from the url or from the request
+    --    body (which servant-scotty provides helpers for), so 'safely' takes
+    --    an operation generated in scotty's ActionT monad. You'll understand
+    --    this when we'll cover the View operation.
+    result <- safely res $ pure op
+    -- 3/ respond relies on there being an instance of the 'Response' class
+    --    which describes how we turn the result of a db operation into
+    --    a proper response (a response body + an HTTP status code).
+    --    In our case, we get back a list of entries, and there's an instance
+    --    for list of entries as long as the type of these entries has
+    --    as ToJSON instance. But luckily, our 'Suitable ListAll' constraint
+    --    requires precisely this! :-)
+    respond result
+```
