@@ -38,7 +38,7 @@ import Servant.Scotty.Arguments
 import Servant.Scotty.Response
 import Web.Scotty.Trans
 
--- | A class that lets you define a handler for an operation @o@.
+-- | A class that lets you define one or more handler(s) for an operation @o@.
 class ScottyOp o where
   -- | Each operation can define its own constraints on:
   --
