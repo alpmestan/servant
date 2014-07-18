@@ -30,6 +30,7 @@ module Servant.Resource
   , Operation
   , (&)
   , Ops
+  , Contains
   ) where
 
 import Servant.Context
