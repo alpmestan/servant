@@ -440,7 +440,7 @@ I think that by now you have a good intuition of what's going on in *servant-sco
 
 ## servant-response
 
-This package is really small and simple. It contains the `Response` typeclass in `Servant.Response` and it has a `Servant.Response.Prelude` module that reexports the class in addition to some standard response types you may want to (re)use -- they already are used by the standard operations `Add`, `Delete` etc in their `ScottyOp` instances.
+This package is really small and simple. It contains the `Response` typeclass in [`Servant.Response`](http://alpmestan.com/servant/servant-response/Servant-Response.html) and it has a [`Servant.Response.Prelude`](http://alpmestan.com/servant/servant-response/Servant-Response-Prelude.html) module that reexports the class in addition to some standard response types you may want to (re)use -- they already are used by the standard operations `Add`, `Delete` etc in their `ScottyOp` instances.
 
 This packages could have been named *servant-json-response*. I'm pretty sure we could work out a generic machinery for turning results into responses in an output format agnostic way, but right now this would be overkill, we only use JSON services here at Zalora, for now.
 
@@ -475,8 +475,52 @@ class ToJSON resp => Response resp result | result -> resp where
 
 So, given a result, decide on what response body and HTTP status should be sent back to the client.
 
-The package also provides a couple of standard response types you can use, with their JSON instances, in `Servant.Response.Prelude`. Please see the haddocks for that module if you want to read more about that.
+The package also provides a couple of standard response types you can use, with their JSON instances, in [`Servant.Response.Prelude`](http://alpmestan.com/servant/servant-response/Servant-Response-Prelude.html). Please see the haddocks for that module if you want to read more about that.
 
-While that's about it for the *servant-response* package, you can find a couple more instances of `Response` in *servant-postgresql*.
+While that's about it for the *servant-response* package, you can find a couple more instances of `Response` in *servant-postgresql*, which is presented below, to generate values of the standard responses from the prelude module from results of queries executed with *postgresql-simple*.
 
 ## servant-postgresql
+
+### Creating a PostgreSQL `Context`
+
+In the [`Servant.Context.PostgreSQL`](http://alpmestan.com/servant/servant-postgresql/Servant-Context-PostgreSQL.html) module, you can find helper functions to easily get a `Context` suitable for running queries on a PostgreSQL server.
+
+There are two types of `Context` you can produce:
+
+- Using `contextOfConnInfo` or `contextOfConnStr`, you get a context where each request fires up a new connection and runs your query.
+- Using `pooledContextOfConnInfo` or `pooledContextOfConnStr`, you get a context that uses a pool of connection (based on [resource-pool](http://hackage.haskell.org/package/resource-pool)).
+
+The `Context` returned by these functions is then meant to be given as an argument to `mkResource` when declaring your `Resource`.
+
+The pooling support is based on the *servant-pool* package, which will be described toward the end of this tutorial.
+
+### Generating responses
+
+Let's say you have the following function.
+
+``` haskell
+addUser :: User -> Connection -> IO Int64
+addUser user conn =
+  execute conn "INSERT INTO users(username, password) VALUES (?, ?)" (username user, password user)
+```
+
+All you need to change to let *servant* handle the response generation for you here is to add a call to `pgresultOfInt64` and `PGResult` with `Add` in the return type.
+
+``` haskell
+addUser :: User -> Connection -> IO (PGResult Add)
+addUser user conn = pgresultOfInt64 $
+  execute conn "INSERT INTO users(username, password) VALUES (?, ?)" (username user, password user)
+```
+
+This will allow the conversion of the `PGResult` to `[UpdateResponse](http://alpmestan.com/servant/servant-response/Servant-Response-Prelude.html#t:UpdateResponse) Add` that can then be sent as JSON to the client. See the haddocks for more detail about this.
+
+Why do we tag `PGResult` with the operation type? Because that lets us behave differently when we generate the response depending on whether we're adding, updating or deleting an entry for example. The latter two may respond with status code `404` if the specified identifier couldn't be found, and the former should answer with HTTP status code `201` if the entry was successfully created. This is what happens with the `Response` instances of `PGResult` for these 3 operations, in `Servant.PostgreSQL.Prelude`.
+
+## servant-pool
+
+The pooling support from *servant-postgresql* is defined using handy functions from this package. It's basically a tiny wrapper on top of [resource-pool](http://hackage.haskell.org/package/resource-pool) that lets you easily produce a `Context` that uses a pool of whatever your "connection-ish" thing is. There are two ways to do that.
+
+- `pooledContext` creates a `Pool` for you and turns it into a context, but...
+- if you already have a `Pool` around, you can just call `contextOfPool` to turn it into a `Context`.
+
+See the haddocks for these functions [here](http://alpmestan.com/servant/servant-pool/Servant-Context-Pool.html).
