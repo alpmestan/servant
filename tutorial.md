@@ -1,3 +1,25 @@
+**Table of contents**
+
+- [Introduction](#introduction)
+- [The servant packages](#the-servant-packages)
+    - [servant](#servant)
+        - [The `Resource` type](#the-resource-type)
+        - [Creating "an empty `Resource`"](#creating-an-empty-resource)
+        - [Operations](#operations)
+        - [Abstract... ?](#abstract-)
+    - [servant-scotty](#servantscotty)
+        - [Running a `Resource`](#running-a-resource)
+        - [Running an operation: `ScottyOp`](#running-an-operation-scottyop)
+            - [Example: `ListAll`](#example-listall)
+            - [Example: `View`](#example-view)
+    - [servant-response](#servantresponse)
+    - [servant-postgresql](#servantpostgresql)
+        - [Creating a PostgreSQL `Context`](#creating-a-postgresql-context)
+        - [Generating responses](#generating-responses)
+    - [servant-pool](#servantpool)
+
+# Introduction
+
 At *Zalora*, we've been writing quite a few webservices and web applications in general. After having myself written a couple of these, I ended up being completely *sick* of this feeling that most of the code just looked really similar. We've been using [scotty](http://hackage.haskell.org/package/scotty), and when we're writing RESTy web services, the code just looks like:
 
 ``` haskell
@@ -37,9 +59,9 @@ Even nicer would be to be able to switch from a web framework to another (or eve
 
 And we came up with a solution for this. The rest of this tutorial describes how to use our solution and explains a bit how it works. Why the latter? Because *servant* has been written with extensibility in mind, and there are several ways you can extend it for your custom input/output formats, web framework, operations and what not.
 
-# Hello servant
+# The servant packages
 
-Alright, let's get started by taking a look at the servant packages and seeing what each one of them brings to the table.
+Alright, let's take a look at the servant packages and see what each one of them brings to the table.
 
 ## servant
 
