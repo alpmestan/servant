@@ -47,16 +47,27 @@ newtype PGResult o = PGResult { pgres :: Int64 }
 --   result to a 'PGResult'.
 --
 --   This will only typecheck on queries that
---   return 'Int64' or @['Only' 'Int']@.
+--   return 'Int64' or @['Only' 'Int']@, or a custom
+--   type of yours for which you provide a 'ToPGResult'
+--   instance.
 toPGResult :: ToPGResult r => IO r -> IO (PGResult o)
 toPGResult = fmap fromRes
 
+-- | Run an 'IO' action that returns @['Only' 'Int']@
+--   and convert the result to a 'PGResult'.
 pgresultOfInts :: IO [Only Int] -> IO (PGResult o)
 pgresultOfInts = toPGResult
 
+-- | Run an 'IO' action that returns 'Int64' and
+--   convert the result to a 'PGResult'.
 pgresultOfInt64 :: IO Int64 -> IO (PGResult o)
 pgresultOfInt64 = toPGResult
 
+-- | Class of types that can be converted to a
+--   'PGResult'.
+--
+--   This package provides instances for 'Int64'
+--   and @['Only' 'Int']@
 class ToPGResult r where
   fromRes :: r -> PGResult o
 
