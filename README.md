@@ -72,8 +72,8 @@ pooling support on top of /PostgreSQL/ connections, and tend to write web apps u
 
 - GETTING STARTED LINK WILL GO HERE
 - [Tutorial](https://github.com/zalora/servant/blob/master/tutorial.md)
-- [Documentation with all modules all packages](http://alpmestan.com/servant/)
-- Documentation of individual packages:
+- [Haddocks for all the modules, from all packages](http://alpmestan.com/servant/)
+- Haddocks of individual packages:
     - [servant](http://alpmestan.com/servant/servant/)
     - [servant-pool](http://alpmestan.com/servant/servant-pool/)
     - [servant-postgresql](http://alpmestan.com/servant/servant-postgresql/)
