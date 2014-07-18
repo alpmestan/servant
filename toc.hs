@@ -5,11 +5,12 @@ import Data.Monoid
 import qualified Data.Char as C
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
+import System.Environment
 
-main :: IO ()
-main = do
-  tutorial <- fmap T.lines $ T.readFile "tutorial.md"
-  let titles = filter ("#" `T.isPrefixOf`) tutorial
+printTOC :: FilePath -> IO ()
+printTOC mdfile = do
+  content <- fmap T.lines $ T.readFile mdfile
+  let titles = filter ("#" `T.isPrefixOf`) content
   mapM_ (T.putStrLn . transform) titles
 
 transform :: T.Text -> T.Text
@@ -25,3 +26,12 @@ transform title =
                      $ t
           in "[" <> t <> "](#" <> anchor <> ")"
 
+main :: IO ()
+main = do
+  args <- getArgs
+  if length args == 1
+    then printTOC (head args)
+    else usage
+
+usage :: IO ()
+usage = putStrLn "You must pass a (markdown) filename to the program"
