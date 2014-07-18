@@ -439,3 +439,44 @@ op <$> idx <*> js
 I think that by now you have a good intuition of what's going on in *servant-scotty* except on the bits related to how we generate a response from the result of an operation, centered around the `Response` class, so let's take a look at it.
 
 ## servant-response
+
+This package is really small and simple. It contains the `Response` typeclass in `Servant.Response` and it has a `Servant.Response.Prelude` module that reexports the class in addition to some standard response types you may want to (re)use -- they already are used by the standard operations `Add`, `Delete` etc in their `ScottyOp` instances.
+
+This packages could have been named *servant-json-response*. I'm pretty sure we could work out a generic machinery for turning results into responses in an output format agnostic way, but right now this would be overkill, we only use JSON services here at Zalora, for now.
+
+Anyway, here's the `Response` class.
+
+``` haskell
+-- | A class that ties return types of your database operations
+--   and the output that will be generated to communicate
+--   the result.
+--
+-- * The first type, @resp@, is the response type that will be encoded
+--   in JSON and sent as the response body.
+--
+-- * The second type, @result@, is the result type of your \"database\"
+--   or \"context\" operation.
+--
+--   For example, if you're adding an item, and if you're using
+--   postgresql-simple, you'll probably want to use the
+--   'Response' instances defined in the servant-postgresql package,
+--   in the @Servant.PostgreSQL.Prelude@ module.
+--
+--   It lets you specify, given a value of your result, if no
+--   exception is thrown, what response should be sent as JSON
+--   to the client along with what HTTP status.
+--
+--   There's a functional dependency at play: the result type
+--   of a database operation determines the representation that'll be
+--   picked for generating the json output.
+class ToJSON resp => Response resp result | result -> resp where
+  toResponse :: result -> (resp, Status)
+```
+
+So, given a result, decide on what response body and HTTP status should be sent back to the client.
+
+The package also provides a couple of standard response types you can use, with their JSON instances, in `Servant.Response.Prelude`. Please see the haddocks for that module if you want to read more about that.
+
+While that's about it for the *servant-response* package, you can find a couple more instances of `Response` in *servant-postgresql*.
+
+## servant-postgresql

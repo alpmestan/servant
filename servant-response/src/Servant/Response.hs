@@ -24,7 +24,7 @@ import Network.HTTP.Types.Status
 
 -- | A class that ties return types of your database operations
 --   and the output that will be generated to communicate
---   the result. 
+--   the result.
 --
 -- * The first type, @resp@, is the response type that will be encoded
 --   in JSON and sent as the response body.
