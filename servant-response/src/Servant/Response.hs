@@ -23,7 +23,7 @@ import Data.Aeson hiding (json)
 import Network.HTTP.Types.Status
 
 -- | A class that ties return types of your database operations
---   and the output format that will be used to communicate
+--   and the output that will be generated to communicate
 --   the result. 
 --
 -- * The first type, @resp@, is the response type that will be encoded
@@ -33,14 +33,16 @@ import Network.HTTP.Types.Status
 --   or \"context\" operation.
 --
 --   For example, if you're adding an item, and if you're using
---   postgresql-simple, you'll probably want to write an instance like:
---
--- > instance Response (UpdateResponse Add) [Only Int] where
---
---   because @[Only Int]@ is what postgresql-simple's @execute@ returns.
+--   postgresql-simple, you'll probably want to use the
+--   'Response' instances defined in the servant-postgresql package,
+--   in the @Servant.PostgreSQL.Prelude@ module.
 --
 --   It lets you specify, given a value of your result, if no
 --   exception is thrown, what response should be sent as JSON
 --   to the client along with what HTTP status.
+--
+--   There's a functional dependency at play: the result type
+--   of a database operation determines the representation that'll be
+--   picked for generating the json output.
 class ToJSON resp => Response resp result | result -> resp where
   toResponse :: result -> (resp, Status)
