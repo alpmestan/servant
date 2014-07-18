@@ -282,6 +282,8 @@ class ScottyOp o where
 
 Alright, so first, we see that to define an instance of `ScottyOp`, we have to give an instance of `Suitable` for our operation, and that the result should be a [`Constraint`](https://www.haskell.org/ghc/docs/latest/html/users_guide/constraint-kind.html). Hmm...
 
+#### Example: `ListAll`
+
 Let's use our "list all" example again. If we were to define a scotty action triggered when someone issues a *GET* request to `/users` (or any other resource supporting the "list all" operation -- an operation doesn't, can't and shouldn't care about the concrete types of entries and index it deals with: it's really meant to synthesize some general pattern resulting from a mix of getting stuffs from the url, the request body, doing something with these, and then turning them back into a some appropriate response) that would do what we described above, there's just one thing we need, and we've already mentionned it: a `ToJSON` instance for the `a` type. So we could start writing an instance for `ListAll` right now:
 
 ``` haskell
@@ -317,23 +319,123 @@ runOperation resource op =
   -- 1/ whatever our resource is, the listing will happen at
   --    /<resource name> on GET requests
   get (capture $ "/" ++ name res) $ do
-    -- 2/ safely runs an operation using the resource's context
+    -- 2/ 'safely' runs an operation using the resource's context
     --    catching potential exceptions and turning them in your error type,
     --    then 'raise'-ing the error for your defaultHandler to... handle it.
     --    Why not just 'safely res op'? Because in other cases, we want to
     --    fetch the operation's arguments from the url or from the request
     --    body (which servant-scotty provides helpers for), so 'safely' takes
     --    an operation generated in scotty's ActionT monad. You'll understand
-    --    this when we'll cover the View operation.
+    --    this better when we'll cover the View operation in the next example.
     result <- safely res $ pure op
     -- 3/ respond relies on there being an instance of the 'Response' class
     --    which describes how we turn the result of a db operation into
     --    a proper response (a response body + an HTTP status code).
     --    In our case, we get back a list of entries, and there's an instance
-    --    for list of entries as long as the type of these entries has
-    --    as ToJSON instance. But luckily, our 'Suitable ListAll' constraint
+    --    of Response for list of entries as long as the type of
+    --    these entries has a ToJSON instance.
+    --    But luckily, our 'Suitable ListAll' constraint
     --    requires precisely this! :-)
     respond result
 ```
 
-And we're done. Now any `Resource` with a list-all operation can see that operation be turned into an endpoint that sends back the list of all entries in JSON. Note that this instance is already provided by *servant-scotty*, in `Servant.Scotty.Prelude`.
+And we're done. Now any `Resource` with a list-all operation can see that operation be turned into an endpoint that sends back the list of all entries in JSON. Note that this instance is already provided by *servant-scotty*, in `Servant.Scotty.Prelude`. Also, we'll get to know the `Response` class more intimately soon, don't worry. Without all the big comments, the code is incredibly short:
+
+``` haskell
+instance ScottyOp ListAll where
+  type Suitable ListAll a i r = ToJSON a
+
+  runOperation res op =
+    get (capture $ "/" ++ name res) $ do
+      result <- safely res $ pure op
+      respond result
+```
+
+Nice! It's now time to see another exemple of `ScottyOp` instance, and one where we'll need to fetch an identifier from the URL.
+
+#### Example: `View`
+
+`ListAll` is quite easy. The answer to a request doesn't even require an argument. We'll now see what's different when there's some kind of indexing going on. Indeed, we're going to define what it means to `View` an entry.
+
+First, let's remember what the "database operation" for viewing an entry should look like:
+
+``` haskell
+type instance Operation View c a i r = i -> c -> IO (Maybe a)
+```
+
+This time, we need to provide an index to the operation in addition to the context. But... when we define a `ScottyOp` instance we don't know (and don't care) what the entries we're dealing with are, it can be anything. So how are we supposed to fetch an index generically? *servant-scotty* provides something for this, the `Index` class from `Servant.Scotty.Arguments`.
+
+``` haskell
+-- | What it means for a scotty 'Resource'
+--   to have an index type.
+--
+--   * 'idx' should lookup in the request path
+--     whatever is necessary to get the @i@
+--     of @Resource c a i r e ops@, for operations
+--     that take it as an argument, e.g /Delete/,
+--     /Update/ or /View/.
+--
+--   * 'route' should return a 'String' that'll be
+--     passed to 'capture'. You may use one or more
+--     \"path parameters\" (calls to 'param', instances
+--     of 'Param') to compute your value of type @k@.
+--     You probably want to use 'name' on the 'Resource'
+--     to generate the beginning of the path.
+class Index k where
+  -- | Lookup the index in the request path
+  idx :: (Functor m, MonadIO m, ScottyError e)
+      => ActionT e m k
+
+  -- | String to 'capture' that represents the
+  --   'RoutePattern'.
+  route :: Resource c a k r e ops -> String
+```
+
+So if we constrain `i` to have an `Index` instance, we can rely on being able to automatically lookup an `i` argument for our database operations. Nice! That's all we need to `View` an entry. Regarding the response, even if you're not forced to use it, *servant-response* does provide an instance that can turn a `Maybe a` result into a "smart" JSON response that just prints the value as JSON if it's found, or prints
+
+``` javascript
+{ "message" : "not found" }
+```
+
+if not. This of course means this instance can be picked only when your entry type as a `ToJSON` instance.
+
+The `route` method will also be helpful, it lets you define just the piece of the route pattern that references an identifier, so that you can use it when defining your endpoint. It takes a `Resource` as a dummy argument to let the compiler know which `i` we want the route pattern for.
+
+Equipped with this, we can define a `ScottyOp` instance for `View`.
+
+``` haskell
+instance ScottyOp View where
+  type Suitable View a i r =
+    (Index i, ToJSON a)
+
+  runOperation res op =
+    -- could be:    /     users       /:username
+    get (capture $ "/" ++ name res ++ route res) $ do
+      -- we use <$> (infix fmap) syntax to feed the operation with the index's
+      -- value and then run the database operation with 'safely' like before
+      result <- safely res $ op <$> idx
+      respond result
+```
+
+Note that independently from the `Index` class, *servant-scotty* also provides a small combinator from trying to decode the request's body as JSON.
+
+``` haskell
+-- | Simply gets the request's body as JSON
+--   (or raises an exception if the decoding fails)
+js :: (MonadIO m, ScottyError e, FromJSON a)
+   => ActionT e m a
+js = jsonData
+
+-- js stands for json, but scotty has a 'json' function
+-- so i named it 'js'.
+```
+
+This is useful for the `Update` operation which needs an index *and a new value for your entry*. You could look them up both by simply doing
+
+``` haskell
+op <$> idx <*> js
+```
+
+I think that by now you have a good intuition of what's going on in *servant-scotty* except on the bits related to how we generate a response from the result of an operation, centered around the `Response` class, so let's take a look at it.
+
+## servant-response
