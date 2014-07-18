@@ -523,4 +523,6 @@ The pooling support from *servant-postgresql* is defined using handy functions f
 - `pooledContext` creates a `Pool` for you and turns it into a context, but...
 - if you already have a `Pool` around, you can just call `contextOfPool` to turn it into a `Context`.
 
+These functions can come handy to you in case you want to use a pool of connections to a MySQL server or any kind of database in general, for example.
+
 See the haddocks for these functions [here](http://alpmestan.com/servant/servant-pool/Servant-Context-Pool.html).
