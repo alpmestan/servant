@@ -10,7 +10,7 @@ mkResource "users" pgsqlcontext pgexceptions
   & deleteWith Users.delete
 ```
 
-which can then be turned into a [scotty](http://hackage.haskell.org/package/scotty) webservice by calling `runResource` (from *servant-scotty* -- the only backend for now) on it.
+which can then be turned into a [scotty](http://hackage.haskell.org/package/scotty) webservice by calling `runResource` (from *servant-scotty* -- the only backend we have for now) on it.
 
 ## Documentation
 
