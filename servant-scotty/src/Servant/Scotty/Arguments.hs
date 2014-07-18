@@ -13,7 +13,7 @@ by decoding it from JSON to your type.
 module Servant.Scotty.Arguments
   ( -- * Deducing an argument from the request path
     Index(..)
-  , -- * Decuding an argument from the JSON body
+  , -- * Deducing an argument from the JSON body
     js
   , FromJSON
   ) where
