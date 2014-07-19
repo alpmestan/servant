@@ -29,12 +29,12 @@ instance ToJSON User where
 instance FromJSON User where
 
 addUser :: User -> Connection -> IO (PGResult Add)
-addUser user conn = toPGResult $
+addUser user conn = pgresultOfInt64 $
   execute conn "insert into users(email, karma) values (?, ?)"
                (email user, karma user)
 
 deleteUser :: Email -> Connection -> IO (PGResult Delete)
-deleteUser email conn = toPGResult $
+deleteUser email conn = pgresultOfInt64 $
   execute conn "delete from users where email = ?" (Only email)
 
 listUsers :: Connection -> IO [User]
