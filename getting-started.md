@@ -176,3 +176,83 @@ instance Index Email where
 ```
 
 ... And we're done with this module! Phew.
+
+# Error handling
+
+Before we get to enjoy our succinct, simple and minimalist webservice resource declaration, we need write some code that'll let us run our postgresql queries in an exception-safe way, relying on a default error handler in your scotty web app for taking care of sending an appropriate response to the client.
+
+We'll create an `Error.hs` module to store the error type of our scotty app and some functions that convert `postgresql-simple` exceptions to our error type.
+
+First off, some boilerplate.
+
+``` haskell
+{-# LANGUAGE DeriveGeneric, OverloadedStrings #-}
+module Error where
+
+import Data.Aeson
+import Data.Monoid
+import Data.Text (Text, pack)
+import Data.Text.Lazy (fromStrict)
+import Data.Text.Encoding (decodeUtf8)
+import Database.PostgreSQL.Simple
+import Database.PostgreSQL.Simple.Errors
+import GHC.Generics
+import Servant.Error
+import Web.Scotty.Trans
+```
+
+## The `ServiceError` type
+
+No fancy needs in our case, let's just make it a wrapper around `Text` and derive JSON encoding/decoding instances automatically.
+
+``` haskell
+newtype ServiceError =
+    ServiceError { msg :: Text }
+    deriving (Eq, Show, Generic)
+
+instance FromJSON ServiceError where
+instance ToJSON ServiceError where
+```
+
+We'll also need to make our type an instance of `ScottyError` so that it integrates well with scotty's error handling. This is however *really* straighforward.
+
+``` haskell
+instance ScottyError ServiceError where
+  stringError s = ServiceError (pack s)
+
+  showError (ServiceError err) = fromStrict err
+```
+
+## Functions for catching constraint violations and SQL errors
+
+These are straightforward too: we're basically extracting bits of information from the error types of [postgresql-simple](http://hackage.haskell.org/package/postgresql-simple) and glueing them into some intelligible error message.
+
+The only thing is that there are some new types. An `ExceptionCatcher ServiceError` value is just some function of type `except -> ServiceError` for some precise type `except` that's an instance of `Exception`. The wrapping is done by calling `catchAnd`. Since you supply it with a conversion function, this is meant to be read as *catch-and-convert-<the-exception>*.
+
+``` haskell
+sqlerrorCatcher :: ExceptionCatcher ServiceError
+sqlerrorCatcher = catchAnd convertError
+  where convertError sqlerr =
+          ServiceError $
+            "sql error: " <> decodeUtf8 (sqlErrorMsg sqlerr)
+
+violationsCatcher :: ExceptionCatcher ServiceError
+violationsCatcher = catchAnd (ServiceError . cvToText)
+  where
+    cvToText :: ConstraintViolation -> Text
+    cvToText (NotNullViolation field) =
+      "field '" <> decodeUtf8 field <> "' shouldn't be NULL"
+
+    cvToText (ForeignKeyViolation table constraint) =
+      "foreign key constraint '" <> decodeUtf8 constraint <>
+      "' on table '" <> decodeUtf8 table <> "' violated"
+
+    cvToText (UniqueViolation constraint) =
+      "unique constraint '" <> decodeUtf8 constraint <> "' violated"
+
+    cvToText (CheckViolation table constraint) =
+      "check of constraint '" <> decodeUtf8 constraint <>
+      "' on table '" <> decodeUtf8 table <> "' violated"
+```
+
+And we're done with error handling! You'll see in the next section how we then ask servant to watch for these exceptions using these conversion functions when one is triggered.
