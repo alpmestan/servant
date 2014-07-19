@@ -13,8 +13,20 @@ import Servant.Scotty.Prelude
 type Email = Text
 
 instance Index Email where
+  -- To fetch the email that references an User
+  -- we just look up the value of the "email" parameter
+  -- in the request path.
+  --
+  -- E.g, if we issue the following request:
+  --   DELETE /users/alp@blah.com
+  -- and given this route pattern:
+  --   /users/:email
+  -- we want to lookup "alp@blah.com"
   idx = param "email"
 
+  -- A "part of a route pattern" we can just reuse whenever we
+  -- need to generate and endpoint that requires looking up
+  -- parameters in the request path.
   route _ = "/:email"
 
 data User =
