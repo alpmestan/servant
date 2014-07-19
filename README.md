@@ -6,7 +6,7 @@ servant
 ``` haskell
 mkResource "users" pgsqlcontext pgexceptions
   & addWith Users.add
-  & viewWith Users.view
+  & listAllWith Users.view
   & deleteWith Users.delete
 ```
 
