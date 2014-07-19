@@ -1,17 +1,12 @@
 {-# LANGUAGE DataKinds,
-             OverloadedStrings,
-             FlexibleInstances,
-             MultiParamTypeClasses #-}
+             OverloadedStrings #-}
 module Main where
 
-import Data.Int
 import Data.Monoid
 import Database.PostgreSQL.Simple (Connection)
-import Servant.Error
 import Servant.PostgreSQL.Prelude
 import Servant.Scotty
 import Servant.Scotty.Prelude
-import Web.Scotty.Trans
 
 import Error
 import Model.User
