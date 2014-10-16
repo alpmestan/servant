@@ -16,13 +16,12 @@ which can then be turned into a [scotty](http://hackage.haskell.org/package/scot
 
 - [Getting started with servant](https://github.com/zalora/servant/blob/master/getting-started.md)
 - [Tutorial](https://github.com/zalora/servant/blob/master/tutorial.md)
-- [Haddocks for all the modules, from all packages](http://alpmestan.com/servant/)
 - Haddocks of individual packages:
-    - [servant](http://alpmestan.com/servant/servant/)
-    - [servant-pool](http://alpmestan.com/servant/servant-pool/)
-    - [servant-postgresql](http://alpmestan.com/servant/servant-postgresql/)
-    - [servant-response](http://alpmestan.com/servant/servant-response/)
-    - [servant-scotty](http://alpmestan.com/servant/servant-scotty/)
+    - [servant](http://hackage.haskell.org/package/servant)
+    - [servant-pool](http://hackage.haskell.org/package/servant-pool)
+    - [servant-postgresql](http://hackage.haskell.org/package/servant-postgresql)
+    - [servant-response](http://hackage.haskell.org/package/servant-response)
+    - [servant-scotty](http://hackage.haskell.org/package/servant-scotty)
 
 ## Extensibility
 
