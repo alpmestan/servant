@@ -18,13 +18,15 @@ import Servant.Server
 
 import qualified Network.HTTP.Client as Client
 
--- | Endpoint for POST requests.
+-- | Endpoint for POST requests. The type variable represents the type of the
+-- response body (not the request body, use 'Servant.API.RQBody.RQBody' for
+-- that).
 data Post a
 
 instance ToJSON a => HasServer (Post a) where
   type Server (Post a) = EitherT (Int, String) IO a
 
-  route Proxy action _globalPathInfo request respond
+  route Proxy action request respond
     | null (pathInfo request) && requestMethod request == methodPost = do
         e <- runEitherT action
         respond $ Just $ case e of

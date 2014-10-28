@@ -11,6 +11,7 @@ module Servant.ServerSpec where
 import Control.Monad.Trans.Either
 import Data.Aeson
 import Data.Proxy
+import Data.String
 import Data.String.Conversions
 import GHC.Generics
 import Network.HTTP.Types
@@ -90,6 +91,13 @@ captureSpec = do
         liftIO $ do
           decode' (simpleBody response) `shouldBe` Just tweety
 
+    with (return (serve
+        (Proxy :: Proxy (Capture "captured" String :> Raw))
+        (\ "captured" request respond ->
+            respond $ responseLBS ok200 [] (cs $ show $ pathInfo request)))) $ do
+      it "strips the captured path snippet from pathInfo" $ do
+        get "/captured/foo" `shouldRespondWith` (fromString (show ["foo" :: String]))
+
 
 type GetApi = Get Person
 getApi :: Proxy GetApi
@@ -164,13 +172,13 @@ rawSpec = do
         liftIO $ do
           simpleBody response `shouldBe` "42"
 
-    it "gets the pathInfo unmodified" $ do
+    it "gets the pathInfo modified" $ do
       (flip runSession) (serve rawApi (rawApplication pathInfo)) $ do
         response <- Network.Wai.Test.request defaultRequest{
-          pathInfo = ["foo"]
+          pathInfo = ["foo", "bar"]
          }
         liftIO $ do
-          simpleBody response `shouldBe` cs (show ["foo" :: String])
+          simpleBody response `shouldBe` cs (show ["bar" :: String])
 
 
 type UnionApi =
