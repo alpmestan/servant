@@ -7,6 +7,8 @@ module Servant.API (
   module Servant.API.Union,
 
   -- * Accessing information from the request
+  -- | Routing based on 'Network.Wai.pathInfo' snippets
+  module Servant.API.Mount,
   -- | Capturing parts of the url path as parsed values
   module Servant.API.Capture,
   -- | Retrieving parameters from the query part of the 'URI'
@@ -29,6 +31,7 @@ import Servant.API.Capture
 import Servant.API.Delete
 import Servant.API.Get
 import Servant.API.GetParam
+import Servant.API.Mount
 import Servant.API.Post
 import Servant.API.Put
 import Servant.API.RQBody
