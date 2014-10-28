@@ -22,10 +22,10 @@ import Test.Hspec.Wai
 
 import Servant.API.Capture
 import Servant.API.Get
-import Servant.API.GetParam
+import Servant.API.ReqBody
 import Servant.API.Post
+import Servant.API.QueryParam
 import Servant.API.Raw
-import Servant.API.RQBody
 import Servant.API.Sub
 import Servant.API.Union
 import Servant.Server
@@ -67,7 +67,7 @@ spec :: Spec
 spec = do
   captureSpec
   getSpec
-  getParamSpec
+  queryParamSpec
   postSpec
   rawSpec
   unionSpec
@@ -113,23 +113,23 @@ getSpec = do
         liftIO $ do
           decode' (simpleBody response) `shouldBe` Just alice
 
-      it "throws 404 on POSTs" $ do
-        post "/" "" `shouldRespondWith` 404
+      it "throws 405 (wrong method) on POSTs" $ do
+        post "/" "" `shouldRespondWith` 405
 
 
-type GetParamApi = GetParam "name" String :> Get Person
-getParamApi :: Proxy GetParamApi
-getParamApi = Proxy
+type QueryParamApi = QueryParam "name" String :> Get Person
+queryParamApi :: Proxy QueryParamApi
+queryParamApi = Proxy
 
-getParamServer :: Server GetParamApi
-getParamServer (Just name) = return alice{name = name}
-getParamServer Nothing = return alice
+queryParamServer :: Server QueryParamApi
+queryParamServer (Just name) = return alice{name = name}
+queryParamServer Nothing = return alice
 
-getParamSpec :: Spec
-getParamSpec = do
-  describe "Servant.API.GetParam" $ do
+queryParamSpec :: Spec
+queryParamSpec = do
+  describe "Servant.API.QueryParam" $ do
     it "allows to retrieve GET parameters" $ do
-      (flip runSession) (serve getParamApi getParamServer) $ do
+      (flip runSession) (serve queryParamApi queryParamServer) $ do
         let params = "?name=bob"
         response <- Network.Wai.Test.request defaultRequest{
           rawQueryString = params,
@@ -141,18 +141,21 @@ getParamSpec = do
            }
 
 
-type PostApi = RQBody Person :> (Post Integer)
+type PostApi = ReqBody Person :> Post Integer
 postApi :: Proxy PostApi
 postApi = Proxy
 
 postSpec :: Spec
 postSpec = do
-  describe "Servant.API.Post and .RQBody" $ do
+  describe "Servant.API.Post and .ReqBody" $ do
     with (return (serve postApi (return . age))) $ do
       it "allows to POST a Person" $ do
         post "/" (encode alice) `shouldRespondWith` "42"{
           matchStatus = 201
          }
+
+      it "correctly rejects invalid request bodies with status 400" $ do
+        post "/" "some invalid body" `shouldRespondWith` 400
 
 
 type RawApi = "foo" :> Raw
