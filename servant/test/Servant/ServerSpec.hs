@@ -23,6 +23,7 @@ import Test.Hspec.Wai
 import Servant.API.Capture
 import Servant.API.Get
 import Servant.API.GetParam
+import Servant.API.Mount
 import Servant.API.Post
 import Servant.API.Raw
 import Servant.API.RQBody
@@ -155,7 +156,7 @@ postSpec = do
          }
 
 
-type RawApi = "foo" :> Raw
+type RawApi = Mount "foo" :> Raw
 rawApi :: Proxy RawApi
 rawApi = Proxy
 rawApplication :: Show a => (Request -> a) -> Application
@@ -182,8 +183,8 @@ rawSpec = do
 
 
 type UnionApi =
-       "foo" :> Get Person
-  :<|> "bar" :> Get Animal
+       Mount "foo" :> Get Person
+  :<|> Mount "bar" :> Get Animal
 unionApi :: Proxy UnionApi
 unionApi = Proxy
 

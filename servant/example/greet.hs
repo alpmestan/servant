@@ -50,9 +50,9 @@ instance ToSample Greet where
 
 -- API specification
 type TestApi = 
-       "hello" :> Capture "name" Text :> GetParam "capital" Bool :> Get Greet
-  :<|> "greet" :> RQBody Greet :> Post Greet
-  :<|> "delete" :> Capture "greetid" Text :> Delete
+       Mount "hello" :> Capture "name" Text :> GetParam "capital" Bool :> Get Greet
+  :<|> Mount "greet" :> RQBody Greet :> Post Greet
+  :<|> Mount "delete" :> Capture "greetid" Text :> Delete
 
 testApi :: Proxy TestApi
 testApi = Proxy
