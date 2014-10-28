@@ -11,5 +11,5 @@ before_install:
 
 notifications:
   email:
-  	- alpmestan@gmail.com
+    - alpmestan@gmail.com
     - soenke.hahn@zalora.com
