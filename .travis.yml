@@ -2,7 +2,13 @@ language: haskell
 
 ghc:
   - 7.8
-  - 7.6
+
+env:
+  - PACKAGE_DIR=servant
+
+before_install:
+  - cd $PACKAGE_DIR
 
 notifications:
-  irc: "irc.freenode.org#haskell-math"
+  email:
+    - soenke.hahn@zalora.com
