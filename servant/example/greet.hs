@@ -5,6 +5,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 import Control.Concurrent (forkIO, killThread)
@@ -49,7 +50,7 @@ instance ToSample Greet where
     where g = Greet "Hello, haskeller!"
 
 -- API specification
-type TestApi = 
+type TestApi =
        "hello" :> Capture "name" Text :> QueryParam "capital" Bool :> Get Greet
   :<|> "greet" :> ReqBody Greet :> Post Greet
   :<|> "delete" :> Capture "greetid" Text :> Delete
