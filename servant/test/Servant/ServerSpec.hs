@@ -187,6 +187,10 @@ rawSpec = do
 type UnionApi =
        "foo" :> Get Person
   :<|> "bar" :> Get Animal
+  :<|> "sub" :> (
+                 ReqBody Person :> Post ()
+            :<|> ReqBody Animal :> Get ())
+
 unionApi :: Proxy UnionApi
 unionApi = Proxy
 
@@ -194,6 +198,9 @@ unionServer :: Server UnionApi
 unionServer =
        return alice
   :<|> return jerry
+  :<|> (
+        (\ Person{} -> return ())
+   :<|> (\ Animal{} -> return ()))
 
 unionSpec :: Spec
 unionSpec = do
@@ -208,3 +215,17 @@ unionSpec = do
         liftIO $ do
           decode' (simpleBody response) `shouldBe`
             Just jerry
+
+      it "throws 404 on unrouted endpoints" $ do
+        get "/not_there" `shouldRespondWith` 404
+
+      context "nested API structure with alternatives with the same path" $ do
+        it "throws 400 on invalid bodies (this trumps wrong method)" $ do
+          Test.Hspec.Wai.request "GET" "/sub" [] (encode (alice :: Person))
+            `shouldRespondWith` 400
+          Test.Hspec.Wai.request "POST" "/sub" [] (encode (jerry :: Animal))
+            `shouldRespondWith` 400
+
+        it "throws 405 on wrong method" $ do
+          Test.Hspec.Wai.request "PUT" "/sub" [] (encode (jerry :: Animal))
+            `shouldRespondWith` 405
