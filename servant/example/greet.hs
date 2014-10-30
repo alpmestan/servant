@@ -68,8 +68,8 @@ server = hello :<|> greet :<|> delete
         hello name (Just True) = return . Greet . toUpper $ "Hello, " <> name
 
         greet = ContT $ \k -> if ("wrong method" == (""::String))
-                                   then k (Resp $ undefined -- failwith whatever)
-                                   else k (Fn $ undefined)
+                                   then k (Resp $ undefined)
+                                   else k (Fn $ return)
 
         delete _ = return ()
 

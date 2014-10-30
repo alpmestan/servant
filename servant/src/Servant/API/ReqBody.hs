@@ -20,16 +20,13 @@ import Servant.Server
 -- * Request Body support
 data ReqBody a
 
--- data ContR a = forall r. Cont r a
 
-                                   --   This should probably be something else  --
-                                                    --  vvv -
-data Hole a = Resp (IO ResponseReceived) | Fn (a -> IO ResponseReceived)
+data Hole a layout = Resp (IO ResponseReceived) | Fn (a -> Server layout)
 
 instance (FromJSON a, HasServer sublayout)
       => HasServer (ReqBody a :> sublayout) where
 
-  type Server (ReqBody a :> sublayout) = ContT ResponseReceived IO (Hole a)
+  type Server (ReqBody a :> sublayout) = ContT ResponseReceived IO (Hole a sublayout)
 
   route Proxy subserver request respond = do
     runContT subserver
@@ -39,7 +36,7 @@ instance (FromJSON a, HasServer sublayout)
                      mrbod <- decode' <$> lazyRequestBody request
                      case mrbod of
                        Nothing -> respond $ failWith InvalidBody
-                       Just a -> fn a
+                       Just a -> route (Proxy :: Proxy sublayout) (fn a) request respond
               )
 
 
@@ -63,19 +60,3 @@ instance (ToSample a, HasDocs sublayout)
 
           action' = action & rqbody .~ toSample p
           p = Proxy :: Proxy a
-
- -- type Server (ReqBody a :> sublayout) =
-  --  a -> Server sublayout
-
-
-  {-
-  --- ((a -> r) -> r) -> Server sublayout
-  --- ContR a -> Server sublayout
-  type Server (ReqBody a :> sublayout) = ContR (a -> Server sublayout)
-
-  route Proxy subserver request respond = do
-    mrqbody <- decode' <$> lazyRequestBody request
-    case mrqbody of
-      Nothing -> route (Proxy :: Proxy sublayout) (subserver $ Left $ respond $ failWith InvalidBody) request respond
-      Just v  -> route (Proxy :: Proxy sublayout) (subserver $ Right v) request respond
-  -}
