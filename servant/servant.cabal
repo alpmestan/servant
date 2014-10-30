@@ -1,12 +1,12 @@
 name:                servant
 version:             0.2
--- synopsis:            
--- description:         
+-- synopsis:
+-- description:
 license:             BSD3
 license-file:        LICENSE
 author:              Alp Mestanogullari, Sönke Hahn, Julian K. Arni
 maintainer:          alpmestan@gmail.com
-copyright:           2014 Zalora SEA
+copyright:           2014 Zalora South East Asia Pte Ltd
 category:            Web
 build-type:          Simple
 cabal-version:       >=1.10
@@ -30,8 +30,6 @@ library
     Servant.API.Sub
     Servant.API.Union
     Servant.Utils.Text
-  -- other-modules:       
-  -- other-extensions:    
   build-depends:
       base >=4.7 && <5
     , either
