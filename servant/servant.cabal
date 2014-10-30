@@ -41,6 +41,7 @@ library
     , http-client
     , http-types
     , network-uri
+    , mtl
     , wai
     , warp
     , safe

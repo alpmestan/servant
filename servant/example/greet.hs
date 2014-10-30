@@ -9,6 +9,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 import Control.Concurrent (forkIO, killThread)
+import Control.Monad.Cont
 import Control.Monad.Trans.Either
 import Data.Aeson
 import Data.Monoid
@@ -66,7 +67,9 @@ server = hello :<|> greet :<|> delete
         hello name (Just False) = return . Greet $ "Hello, " <> name
         hello name (Just True) = return . Greet . toUpper $ "Hello, " <> name
 
-        greet = return
+        greet = ContT $ \k -> if ("wrong method" == (""::String))
+                                   then k (Resp $ undefined -- failwith whatever)
+                                   else k (Fn $ undefined)
 
         delete _ = return ()
 
