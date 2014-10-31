@@ -43,3 +43,10 @@ instance FromText Integer where
 
 instance ToText Integer where
   toText = cs . show
+
+
+instance FromText Int where
+  fromText = readMaybe . cs
+
+instance ToText Int where
+  toText = cs . show
