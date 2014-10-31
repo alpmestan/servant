@@ -29,6 +29,7 @@ library
     Servant.API.Raw
     Servant.API.Sub
     Servant.API.Alternative
+    Servant.Utils.Client
     Servant.Utils.Text
   build-depends:
       base >=4.7 && <5
@@ -86,6 +87,7 @@ test-suite spec
     , hspec-wai
     , http-client
     , http-types
+    , network >= 2.6
     , network-uri >= 2.6
     , servant
     , string-conversions
@@ -93,3 +95,4 @@ test-suite spec
     , transformers
     , wai
     , wai-extra
+    , warp
