@@ -1,7 +1,11 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Servant.API.Raw where
 
+import Control.Monad.Cont
 import Data.Proxy
 import Network.Wai
 import Servant.Server
@@ -12,7 +16,9 @@ import Servant.Server
 -- a modified (stripped) 'pathInfo' if the 'Application' is being routed with 'Servant.API.Sub.:>'.
 data Raw
 
-instance HasServer Raw where
+data RawHole = RawHole
+
+instance HasServer Raw RawHole where
   type Server Raw = Application
-  route Proxy rawApplication request respond =
+  route Proxy rawApplication request respond = ContT $ \_ ->
     rawApplication request (respond . succeedWith)

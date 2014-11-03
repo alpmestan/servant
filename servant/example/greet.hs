@@ -71,6 +71,7 @@ server = hello :<|> greet :<|> delete
 
         delete _ = return ()
 
+{-
 -- Client-side query functions
 clientApi :: Client TestApi
 clientApi = client testApi
@@ -80,13 +81,16 @@ postGreet :: Greet -> URIAuth -> EitherT String IO Greet
 deleteGreet :: Text -> URIAuth -> EitherT String IO ()
 getGreet :<|> postGreet :<|> deleteGreet = clientApi
 
+-}
 -- Turn the server into a WAI app
 test :: Application
 test = serve testApi server
 
+{-
 -- Documentation
 docsGreet :: API
 docsGreet = docs testApi
+-}
 
 -- Run the server
 runTestServer :: Port -> IO ()
@@ -95,13 +99,4 @@ runTestServer port = run port test
 -- Run some queries against the server
 main :: IO ()
 main = do
-  tid <- forkIO $ runTestServer 8001
-  let uri = mkHost "localhost" 8001
-  print =<< runEitherT (getGreet "alp" (Just True) uri)
-  print =<< runEitherT (getGreet "alp" (Just False) uri)
-  let g = Greet "yo"
-  print =<< runEitherT (postGreet g uri)
-  print =<< runEitherT (deleteGreet "blah" uri)
-  killThread tid
-  putStrLn "\n---------\n"
-  printMarkdown docsGreet
+  runTestServer 8001

@@ -24,6 +24,10 @@ module Servant.API (
   -- | PUT requests
   module Servant.API.Put,
 
+  -- * End
+  -- | Ends the type
+  module Servant.API.End,
+
   -- * Utilities
   -- | QuasiQuotes for endpoints
   module Servant.API.QQ,
@@ -39,3 +43,4 @@ import Servant.API.QQ (sitemap)
 import Servant.API.ReqBody
 import Servant.API.Sub
 import Servant.API.Alternative
+import Servant.API.End

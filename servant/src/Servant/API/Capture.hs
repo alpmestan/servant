@@ -4,8 +4,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Servant.API.Capture where
 
+import Control.Monad.Cont
 import Data.Proxy
 import Data.Text
 import GHC.TypeLits
@@ -14,6 +18,7 @@ import Servant.API.Sub
 import Servant.Client
 import Servant.Docs
 import Servant.Server
+import Servant.API.ContTypes
 import Servant.Utils.Text
 
 -- * Captures
@@ -22,8 +27,8 @@ data Capture sym a
 captured :: FromText a => proxy (Capture sym a) -> Text -> Maybe a
 captured _ = fromText
 
-instance (KnownSymbol capture, FromText a, HasServer sublayout)
-      => HasServer (Capture capture a :> sublayout) where
+instance (KnownSymbol capture, FromText a, HasServer sublayout (IsRouteMismatchH k))
+      => HasServer (Capture capture a :> sublayout) (IsRouteMismatchH k) where
 
   type Server (Capture capture a :> sublayout) =
      a -> Server sublayout
@@ -31,11 +36,11 @@ instance (KnownSymbol capture, FromText a, HasServer sublayout)
   route Proxy subserver request respond = case pathInfo request of
     (first : rest)
       -> case captured captureProxy first of
-           Nothing  -> respond $ failWith NotFound
+           Nothing  -> ContT $ \k -> k IsMismatch
            Just v   -> route (Proxy :: Proxy sublayout) (subserver v) request{
                          pathInfo = rest
                        } respond
-    _ -> respond $ failWith NotFound
+    _ -> ContT $ \k -> k IsMismatch
 
     where captureProxy = Proxy :: Proxy (Capture capture a)
 

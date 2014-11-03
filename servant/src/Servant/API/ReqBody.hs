@@ -3,13 +3,18 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Servant.API.ReqBody where
 
 import Control.Applicative
+import Control.Monad.Cont
 import Data.Aeson
 import Data.Proxy
 import Network.Wai
 import Servant.API.Sub
+import Servant.API.ContTypes
 import Servant.Client
 import Servant.Docs
 import Servant.Server
@@ -17,16 +22,16 @@ import Servant.Server
 -- * Request Body support
 data ReqBody a
 
-instance (FromJSON a, HasServer sublayout)
-      => HasServer (ReqBody a :> sublayout) where
+instance (FromJSON a, HasServer sublayout (IsRouteMismatchH k))
+      => HasServer (ReqBody a :> sublayout) (IsRouteMismatchH k) where
 
   type Server (ReqBody a :> sublayout) =
     a -> Server sublayout
 
   route Proxy subserver request respond = do
-    mrqbody <- decode' <$> lazyRequestBody request
+    mrqbody <- liftIO $ decode' <$> lazyRequestBody request
     case mrqbody of
-      Nothing -> respond $ failWith InvalidBody
+      Nothing -> ContT $ \k -> k $ PartialMismatch $ ContT $ \_ -> respond (failWith InvalidBody)
       Just v  -> route (Proxy :: Proxy sublayout) (subserver v) request respond
 
 instance (ToJSON a, HasClient sublayout)

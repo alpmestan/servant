@@ -2,18 +2,25 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Servant.API.Get where
 
 import Control.Monad.Trans.Either
+import Control.Monad.IO.Class
+import Control.Monad.Cont
 import Data.Aeson
 import Data.Proxy
 import Data.String.Conversions
 import Data.Typeable
+import Data.Void
 import Network.HTTP.Types
 import Network.URI
 import Network.Wai
 import Servant.Client
 import Servant.Docs
+import Servant.API.ContTypes
 import Servant.Server
 import Servant.Utils.Client
 
@@ -22,19 +29,22 @@ import Servant.Utils.Client
 data Get a
   deriving Typeable
 
-instance ToJSON result => HasServer (Get result) where
+data GetHole = GetHole
+
+
+instance ToJSON result => HasServer (Get result) (IsRouteMismatchH Void) where
   type Server (Get result) = EitherT (Int, String) IO result
   route Proxy action request respond
     | null (pathInfo request) && requestMethod request == methodGet = do
-        e <- runEitherT action
-        respond . succeedWith $ case e of
+        e <- liftIO $ runEitherT action
+        ContT $ \_ -> respond . succeedWith $ case e of
           Right output ->
             responseLBS ok200 [("Content-Type", "application/json")] (encode output)
           Left (status, message) ->
             responseLBS (mkStatus status (cs message)) [] (cs message)
     | null (pathInfo request) && requestMethod request /= methodGet =
-        respond $ failWith WrongMethod
-    | otherwise = respond $ failWith NotFound
+        ContT $ \k -> k $ PartialMismatch $ ContT $ \_ -> respond $ failWith WrongMethod
+    | otherwise = ContT $ \k -> k IsMismatch
 
 instance FromJSON result => HasClient (Get result) where
   type Client (Get result) = URIAuth -> EitherT String IO result

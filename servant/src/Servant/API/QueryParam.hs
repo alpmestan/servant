@@ -5,8 +5,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Servant.API.QueryParam where
 
+import Control.Monad.Cont
 import Data.List
 import Data.Maybe
 import Data.Proxy
@@ -29,8 +32,8 @@ import Servant.Utils.Text
 -- - a @'ToParam' ('QueryParam' sym a)@ instance for automatic documentation generation
 data QueryParam sym a
 
-instance (KnownSymbol sym, FromText a, HasServer sublayout)
-      => HasServer (QueryParam sym a :> sublayout) where
+instance (KnownSymbol sym, FromText a, HasServer sublayout k)
+      => HasServer (QueryParam sym a :> sublayout) k where
 
   type Server (QueryParam sym a :> sublayout) =
     Maybe a -> Server sublayout
@@ -76,8 +79,8 @@ instance (KnownSymbol sym, ToParam (QueryParam sym a), HasDocs sublayout)
 -- | Retrieve a list from the query string.
 data QueryParams sym a
 
-instance (KnownSymbol sym, FromText a, HasServer sublayout)
-      => HasServer (QueryParams sym a :> sublayout) where
+instance (KnownSymbol sym, FromText a, HasServer sublayout k)
+      => HasServer (QueryParams sym a :> sublayout) k where
 
   type Server (QueryParams sym a :> sublayout) =
     [a] -> Server sublayout
@@ -124,8 +127,8 @@ instance (KnownSymbol sym, ToParam (QueryParams sym a), HasDocs sublayout)
 -- | Retrieve a value-less boolean from the query string.
 data QueryFlag a
 
-instance (KnownSymbol sym, HasServer sublayout)
-      => HasServer (QueryFlag sym :> sublayout) where
+instance (KnownSymbol sym, HasServer sublayout k)
+      => HasServer (QueryFlag sym :> sublayout) k where
 
   type Server (QueryFlag sym :> sublayout) =
     Bool -> Server sublayout

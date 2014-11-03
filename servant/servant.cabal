@@ -29,6 +29,8 @@ library
     Servant.API.Raw
     Servant.API.Sub
     Servant.API.Alternative
+    Servant.API.ContTypes
+    Servant.API.End
     Servant.Utils.Client
     Servant.Utils.Text
   build-depends:
@@ -46,11 +48,13 @@ library
     , wai
     , warp
     , safe
+    , mtl
     , transformers
     , template-haskell
     , text
     , lens
     , unordered-containers
+    , void
     , hashable
   hs-source-dirs: src
   default-language: Haskell2010

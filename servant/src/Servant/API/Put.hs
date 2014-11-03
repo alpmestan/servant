@@ -2,8 +2,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE UndecidableInstances #-}
 module Servant.API.Put where
 
+import Control.Monad.Cont
 import Control.Monad.Trans.Either
 import Data.Aeson
 import Data.Proxy
@@ -21,21 +25,23 @@ import Servant.Utils.Client
 data Put a
   deriving Typeable
 
-instance ToJSON a => HasServer (Put a) where
+data PutHole = PutHole
+
+instance ToJSON a => HasServer (Put a) PutHole where
   type Server (Put a) = EitherT (Int, String) IO a
 
   route Proxy action request respond
     | null (pathInfo request) && requestMethod request == methodPut = do
-        e <- runEitherT action
-        respond . succeedWith $ case e of
+        e <- liftIO $ runEitherT action
+        ContT $ \_ -> respond . succeedWith $ case e of
           Right out ->
             responseLBS ok200 [("Content-Type", "application/json")] (encode out)
           Left (status, message) ->
             responseLBS (mkStatus status (cs message)) [] (cs message)
     | null (pathInfo request) && requestMethod request /= methodPut =
-        respond $ failWith WrongMethod
+        ContT $ \_ -> respond $ failWith WrongMethod
 
-    | otherwise = respond $ failWith NotFound
+    | otherwise = ContT $ \_ -> respond $ failWith NotFound
 
 instance FromJSON a => HasClient (Put a) where
   type Client (Put a) = URIAuth -> EitherT String IO a
