@@ -111,12 +111,30 @@ instance ( Split x xs ls eqs gs
             ls' = qsort ls
             gs' = qsort gs
 
-listQSort :: QSort xs ys => xs -> ys
-listQSort = const undefined
+
+--------------------------------------------------------------------------
+-- ReqBody last
+--------------------------------------------------------------------------
+
+class RBLast orig new | orig -> new where
+    rblast :: orig -> new
+instance RBLast (Get x) (Get x) where
+    rblast = id
+instance ( RBLast xs ys
+         , SubApp (ReqBody x) ys zs
+         ) => RBLast (ReqBody x :> xs) zs where
+    rblast (_ :> xs) = subapp (undefined::ReqBody x) $ rblast xs
+
+class SubApp x xs xxs | x xs -> xxs where
+    subapp :: x -> xs -> xxs
+instance (SubApp a bs cs) => SubApp a (b :> bs) (b :> cs) where
+    subapp a (b :> bs) = b :> subapp a bs
+instance SubApp a (Get x) (Get x :> a) where
+    subapp a _ = (Proxy :: Proxy (Get x)) :> a
+
 --------------------------------------------------------------------------
 -- Type families for testing
 --------------------------------------------------------------------------
-{-
 type family CommonInitial x where
     CommonInitial (a :> b :<|> a :> c) = a :> (CommonInitial b :<|> c)
     CommonInitial a = a
@@ -140,12 +158,10 @@ type family ReqBodyLast' x where
 type family ReqBodyLast x where
     ReqBodyLast (a :<|> b) = ReqBodyLast' a :<|> ReqBodyLast b
     ReqBodyLast a = ReqBodyLast' a
--}
 
 --------------------------------------------------------------------------
 -- Playground
 --------------------------------------------------------------------------
-data Greet
 
 type TestApi =
        "d" :> Get Int
