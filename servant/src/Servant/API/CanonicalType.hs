@@ -1,19 +1,121 @@
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverlappingInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 module Servant.API.CanonicalType where
 
+import Data.Proxy
+import Servant.API
 import GHC.TypeLits
 
-data APIRoute x where
-    Post :: a -> APIRoute (a)
-    Get  :: a -> APIRoute (a)
-    Put  :: a -> APIRoute (a)
-    Delete :: APIRoute Delete
+--------------------------------------------------------------------------
+-- Type directed sort
+--
+-- Adapted from an example by Roman Leshchinskiy [0] to include value-level
+-- lock-step logic. We don't have enough information at the value-level to
+-- perform the sort, so we need to use the types.
+--
+-- [0] https://www.haskell.org/haskellwiki/Type_arithmetic#An_Advanced_Example_:_Type-Level_Quicksort
+--
+--  Quicksort is certainly the wrong idea, though.
+--------------------------------------------------------------------------
 
+class Cmp x y c | x y -> c where
+    cmp :: Proxy x -> Proxy y -> Ordering
+instance (KnownSymbol a, KnownSymbol b, o ~ CmpSymbol a b) => Cmp a b o where
+    cmp x y = symbolVal x `compare` symbolVal y
+instance (KnownSymbol a) => Cmp a (Capture n t) LT where
+    cmp _ _ = LT
+instance (KnownSymbol b) => Cmp (Capture n t) b GT where
+    cmp _ _ = GT
+instance                    Cmp (Capture n t) (Capture n' t') EQ where
+    cmp _ _ = EQ
+instance (Cmp a' b' o)     => Cmp (a :> a') (a :> b') o where
+    cmp (Proxy::Proxy(a :> a'))
+        (Proxy::Proxy(b :> b')) = cmp (Proxy::Proxy a') (Proxy::Proxy b')
+instance (Cmp a b o)     => Cmp (a :> a') (b :> b') o where
+    cmp (Proxy::Proxy(a :> a'))
+        (Proxy::Proxy(b :> b')) = cmp (Proxy::Proxy a) (Proxy::Proxy b)
+instance (Cmp a b o)     => Cmp a (b :> b') o where
+    cmp (Proxy::Proxy a)
+        (Proxy::Proxy(b :> b')) = cmp (Proxy::Proxy a) (Proxy::Proxy b)
+instance (Cmp a b o)     => Cmp (a :> a') b o where
+    cmp (Proxy::Proxy (a :> a'))
+        (Proxy::Proxy b) = cmp (Proxy::Proxy a) (Proxy::Proxy b)
+instance                    Cmp (Get x) (Get y) EQ where
+    cmp _ _ = EQ
+-- add queryparams etc.
+-- is @cmp@ really necessary (or useful)?
+
+
+-- put a value into one of three lists according to a pivot element
+class Pick c x ls eqs gs ls' eqs' gs' | c x ls eqs gs -> ls' eqs' gs' where
+    pick :: Proxy c -> x -> (ls, eqs, gs) -> (ls', eqs', gs')
+instance Pick LT x ls eqs gs (x :<|> ls) eqs gs where
+    pick _ x (ls, eqs, gs) = (x :<|> ls, eqs, gs)
+instance Pick EQ x ls eqs gs ls (x :<|> eqs) gs where
+    pick _ x (ls, eqs, gs) = (ls, x :<|> eqs, gs)
+instance Pick GT x ls eqs gs ls eqs (x :<|> gs) where
+    pick _ x (ls, eqs, gs) = (ls, eqs, x :<|> gs)
+
+data Nil = Nil
+
+-- split a list into three parts according to a pivot element
+class Split n xs ls eqs gs | n xs -> ls eqs gs where
+    split :: n -> xs -> (ls, eqs, gs)
+instance Split n Nil Nil Nil Nil where
+    split _ Nil = (Nil, Nil, Nil)
+instance ( Split n xs ls' eqs' gs'
+         , Cmp x n c
+         , Pick c x ls' eqs' gs' ls eqs gs
+         ) => Split n (x :<|> xs) ls eqs gs where
+    split n (x :<|> xs) = (ls, eqs, gs)
+      where (ls', eqs', gs') = split n xs
+            (ls , eqs , gs ) = pick (Proxy::Proxy c) x (ls', eqs', gs')
+
+-- zs = xs ++ ys
+class App xs ys zs | xs ys -> zs where
+    app :: xs -> ys -> zs
+instance App Nil ys ys where
+    app _ ys = ys
+instance App xs ys zs => App (x :<|> xs) ys (x :<|> zs) where
+    app (x :<|> xs) ys = x :<|> app xs ys
+
+class App' xs n ys zs | xs n ys -> zs where
+    app' :: xs -> n -> ys -> zs
+instance App' Nil n ys (n :<|> ys) where
+    app' _ n ys = n :<|> ys
+instance (App' xs n ys zs) => App' (x :<|> xs) n ys (x :<|> zs) where
+    app' (x :<|> xs) n ys = x :<|> app' xs n ys
+
+-- quicksort
+class QSort xs ys | xs -> ys where
+    qsort :: xs -> ys
+instance QSort Nil Nil where
+    qsort _ = Nil
+instance ( Split x xs ls eqs gs
+         , QSort ls ls'
+         , QSort gs gs'
+         , App eqs gs' geqs
+         , App' ls' x geqs ys
+         ) => QSort (x :<|> xs) ys where
+    qsort (x :<|> xs) = app' ls' x (app eqs gs')
+      where (ls, eqs, gs) = split x xs
+            ls' = qsort ls
+            gs' = qsort gs
+
+listQSort :: QSort xs ys => xs -> ys
+listQSort = const undefined
+--------------------------------------------------------------------------
+-- Type families for testing
+--------------------------------------------------------------------------
 {-
 type family CommonInitial x where
     CommonInitial (a :> b :<|> a :> c) = a :> (CommonInitial b :<|> c)
@@ -38,13 +140,19 @@ type family ReqBodyLast' x where
 type family ReqBodyLast x where
     ReqBodyLast (a :<|> b) = ReqBodyLast' a :<|> ReqBodyLast b
     ReqBodyLast a = ReqBodyLast' a
+-}
 
+--------------------------------------------------------------------------
+-- Playground
+--------------------------------------------------------------------------
 data Greet
 
 type TestApi =
-       "hello" :> Capture "name" String :> QueryParam "capital" Bool :> Get Greet
-  :<|> "greet" :> ReqBody Greet :> Post Greet
-  :<|> "delete" :> Capture "greetid" Bool :> Delete
-  :<|> "hello" :> Capture "true" Bool :> QueryParam "capital" Bool :> Get Greet
-type TestApi2 = "greet" :> ReqBody Greet :> Post Greet
--}
+       "d" :> Get Int
+  :<|> "b" :> Get Int
+  :<|> "a" :> Get Int
+  :<|> "c" :> Get Int
+  :<|> Nil
+
+
+
