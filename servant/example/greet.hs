@@ -20,8 +20,10 @@ import Network.Wai
 import Network.Wai.Handler.Warp
 
 import Servant.API
+import Servant.CanonicalType hiding (TestApi)
 import Servant.Client
 import Servant.Docs
+import Servant.Serve
 import Servant.Server
 
 -- * Example
@@ -71,6 +73,7 @@ server = hello :<|> greet :<|> delete
 
         delete _ = return ()
 
+{-
 -- Client-side query functions
 clientApi :: Client TestApi
 clientApi = client testApi
@@ -79,14 +82,17 @@ getGreet :: Text -> Maybe Bool -> URIAuth -> EitherT String IO Greet
 postGreet :: Greet -> URIAuth -> EitherT String IO Greet
 deleteGreet :: Text -> URIAuth -> EitherT String IO ()
 getGreet :<|> postGreet :<|> deleteGreet = clientApi
+-}
 
 -- Turn the server into a WAI app
 test :: Application
 test = serve testApi server
 
+{-
 -- Documentation
 docsGreet :: API
 docsGreet = docs testApi
+-}
 
 -- Run the server
 runTestServer :: Port -> IO ()
@@ -95,6 +101,8 @@ runTestServer port = run port test
 -- Run some queries against the server
 main :: IO ()
 main = do
+  runTestServer 8001
+{-
   tid <- forkIO $ runTestServer 8001
   let uri = mkHost "localhost" 8001
   print =<< runEitherT (getGreet "alp" (Just True) uri)
@@ -105,3 +113,4 @@ main = do
   killThread tid
   putStrLn "\n---------\n"
   printMarkdown docsGreet
+ -}

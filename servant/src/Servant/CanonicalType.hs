@@ -24,8 +24,11 @@ import GHC.TypeLits
 class Canonicalize orig new | orig -> new where
     canonicalize :: orig -> new
 
+instance (Canonicalize a b) => Canonicalize (Proxy a) (Proxy b) where
+    canonicalize _ = Proxy
 instance (RBLast a b) => Canonicalize a b where
-    canonicalize = rblast
+    canonicalize = rblast -- TODO: eventually include others
+
 --------------------------------------------------------------------------
 -- Type directed sort
 --
@@ -38,6 +41,7 @@ instance (RBLast a b) => Canonicalize a b where
 --  Quicksort is certainly the wrong idea, though.
 --------------------------------------------------------------------------
 
+{-
 class Cmp x y c | x y -> c where
     cmp :: Proxy x -> Proxy y -> Ordering
 instance (KnownSymbol a, KnownSymbol b, o ~ CmpSymbol a b) => Cmp a b o where
@@ -122,7 +126,7 @@ instance ( Split x xs ls eqs gs
             ls' = qsort ls
             gs' = qsort gs
 
-
+-}
 --------------------------------------------------------------------------
 -- ReqBody last
 --------------------------------------------------------------------------
@@ -131,15 +135,27 @@ class RBLast orig new | orig -> new where
     rblast :: orig -> new
 instance RBLast (Get x) (Get x) where
     rblast = id
+instance RBLast (Post x) (Post x) where
+    rblast = id
+instance RBLast (Put x) (Put x) where
+    rblast = id
+instance RBLast Delete Delete where
+    rblast = id
 instance ( RBLast xs ys
          , SubApp (ReqBody x) ys zs
          ) => RBLast (ReqBody x :> xs) zs where
     rblast (_ :> xs) = subapp (undefined::ReqBody x) $ rblast xs
 instance ( RBLast xs ys
+         ) => RBLast (a :> xs) (a :> ys) where
+    rblast (x :> xs) = x :> rblast xs
+instance (a ~ b) => RBLast a b where
+    rblast = id
+instance ( RBLast xs ys
          , RBLast xs' ys'
          ) => RBLast (xs :<|> xs') (ys :<|> ys') where
     rblast (xs :<|> xs') = rblast xs :<|> rblast xs'
 
+-- subapp x xs ==> xs + [x]
 class SubApp x xs xxs | x xs -> xxs where
     subapp :: x -> xs -> xxs
 instance (SubApp a bs cs) => SubApp a (b :> bs) (b :> cs) where
@@ -184,7 +200,6 @@ type TestApi =
   :<|> "b" :> Get Int
   :<|> "a" :> Get Int
   :<|> "c" :> Get Int
-  :<|> Nil
 
 
 

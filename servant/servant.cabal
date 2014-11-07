@@ -16,6 +16,7 @@ library
     Servant
     Servant.Client
     Servant.Docs
+    Servant.Serve
     Servant.Server
     Servant.CanonicalType
     Servant.API

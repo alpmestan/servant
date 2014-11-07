@@ -7,35 +7,10 @@
 
 module Servant.Server where
 
-import Servant.CanonicalType
-import Data.Function (on)
 import Data.Monoid
 import Data.Proxy
-import Network.HTTP.Types
 import Network.Wai
 
--- * Implementing Servers
-
--- | 'serve' allows you to implement an API and produce a wai 'Application'.
-serve :: ( HasServer canon
-         , Canonicalize layout canon
-         ) => Proxy layout -> Server layout -> Application
-serve p server = toApplication (route p server)
-    where route' = route `on` canonicalize
-
-toApplication :: RoutingApplication -> Application
-toApplication ra request respond = do
-  ra request (routingRespond . routeResult)
- where
-  routingRespond :: Either RouteMismatch Response -> IO ResponseReceived
-  routingRespond (Left NotFound) =
-    respond $ responseLBS notFound404 [] "not found"
-  routingRespond (Left WrongMethod) =
-    respond $ responseLBS methodNotAllowed405 [] "method not allowed"
-  routingRespond (Left InvalidBody) =
-    respond $ responseLBS badRequest400 [] "Invalid JSON in request body"
-  routingRespond (Right response) =
-    respond response
 
 -- * Route mismatch
 data RouteMismatch =
