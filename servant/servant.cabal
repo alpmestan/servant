@@ -17,9 +17,9 @@ library
     Servant.Client
     Servant.Docs
     Servant.Server
+    Servant.CanonicalType
     Servant.API
     Servant.API.Capture
-    Servant.API.CanonicalType
     Servant.API.Delete
     Servant.API.Get
     Servant.API.Post

@@ -9,12 +9,23 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE OverlappingInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
-module Servant.API.CanonicalType where
+module Servant.CanonicalType where
 
 import Data.Proxy
 import Servant.API
 import GHC.TypeLits
 
+--------------------------------------------------------------------------
+-- Canonicalize
+--
+-- Combine the individual transformations into a single one.
+--------------------------------------------------------------------------
+
+class Canonicalize orig new | orig -> new where
+    canonicalize :: orig -> new
+
+instance (RBLast a b) => Canonicalize a b where
+    canonicalize = rblast
 --------------------------------------------------------------------------
 -- Type directed sort
 --
@@ -124,6 +135,10 @@ instance ( RBLast xs ys
          , SubApp (ReqBody x) ys zs
          ) => RBLast (ReqBody x :> xs) zs where
     rblast (_ :> xs) = subapp (undefined::ReqBody x) $ rblast xs
+instance ( RBLast xs ys
+         , RBLast xs' ys'
+         ) => RBLast (xs :<|> xs') (ys :<|> ys') where
+    rblast (xs :<|> xs') = rblast xs :<|> rblast xs'
 
 class SubApp x xs xxs | x xs -> xxs where
     subapp :: x -> xs -> xxs
@@ -131,6 +146,7 @@ instance (SubApp a bs cs) => SubApp a (b :> bs) (b :> cs) where
     subapp a (b :> bs) = b :> subapp a bs
 instance SubApp a (Get x) (Get x :> a) where
     subapp a _ = (Proxy :: Proxy (Get x)) :> a
+
 
 --------------------------------------------------------------------------
 -- Type families for testing
