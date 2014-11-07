@@ -133,14 +133,6 @@ instance ( Split x xs ls eqs gs
 
 class RBLast orig new | orig -> new where
     rblast :: orig -> new
-instance RBLast (Get x) (Get x) where
-    rblast = id
-instance RBLast (Post x) (Post x) where
-    rblast = id
-instance RBLast (Put x) (Put x) where
-    rblast = id
-instance RBLast Delete Delete where
-    rblast = id
 instance ( RBLast xs ys
          , SubApp (ReqBody x) ys zs
          ) => RBLast (ReqBody x :> xs) zs where
