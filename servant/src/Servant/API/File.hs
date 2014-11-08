@@ -1,5 +1,6 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -15,6 +16,7 @@ import Network.HTTP.Types
 import Network.Mime
 import Network.URI
 import Network.Wai
+import Servant.API.Sub
 import Servant.Client
 import Servant.Common.BaseUrl
 import Servant.Common.Req
@@ -26,16 +28,38 @@ import System.FilePath
 
 import qualified Data.ByteString.Lazy.Char8 as LB
 
+-- | > servantFilesEnv = "SERVANT_FILES"
 servantFilesEnv :: String
 servantFilesEnv = "SERVANT_FILES"
 
 type BaseDir = String
 
+-- | Serve @$SERVANT_FILES/filename@, where @$SERVANT_FILES@ is an
+--   environment variable you have to set.
 data File filename
   deriving Typeable
 
+-- | A "dummy" handler for serving static files.
+--
+-- > type MySite = Static "cv.html"  -- under /cv.html, serve cv.html
+-- >          :<|> File "index.html" -- under /, serve "index.html"
+-- >
+-- > server :: Server MySite
+-- > server = file :<|> file
 file :: ()
 file = ()
+
+-- | Equivalent to @filename :> 'File' filename@.
+--
+-- > Static "cv.html" :<|> Static "contact.html"
+--
+-- is equivalent to:
+--
+-- >        "cv.html"      :> File "cv.html"        -- /cv.html
+-- >   :<|> "contact.html" :> File "contact.html"   -- /contact.html
+--
+-- And would serve @cv.html@ under @/cv.html@ and @contact.html@ under @/contact.html@.
+type Static filename = filename :> File filename
 
 instance KnownSymbol filename => HasServer (File filename) where
   type Server (File filename) = ()
