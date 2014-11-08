@@ -10,12 +10,12 @@ import Data.Proxy
 import Data.String.Conversions
 import Data.Typeable
 import Network.HTTP.Types
-import Network.URI
 import Network.Wai
 import Servant.Client
+import Servant.Common.BaseUrl
+import Servant.Common.Req
 import Servant.Docs
 import Servant.Server
-import Servant.Utils.Client
 
 -- | Endpoint for POST requests. The type variable represents the type of the
 -- response body (not the request body, use 'Servant.API.RQBody.RQBody' for
@@ -39,7 +39,7 @@ instance ToJSON a => HasServer (Post a) where
     | otherwise = respond $ failWith NotFound
 
 instance FromJSON a => HasClient (Post a) where
-  type Client (Post a) = URIAuth -> EitherT String IO a
+  type Client (Post a) = BaseUrl -> EitherT String IO a
 
   clientWithRoute Proxy req uri =
     performRequest methodPost req 201 uri

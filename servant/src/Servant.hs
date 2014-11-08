@@ -7,14 +7,16 @@ module Servant (
   module Servant.Server,
   -- | For accessing servant APIs as API clients.
   module Servant.Client,
+  module Servant.Common.BaseUrl,
   -- | For generating documentation for servant APIs.
   module Servant.Docs,
   -- | Helper module
-  module Servant.Utils.Text,
+  module Servant.Common.Text,
   ) where
 
 import Servant.API
 import Servant.Client
+import Servant.Common.BaseUrl
+import Servant.Common.Text
 import Servant.Docs
 import Servant.Server
-import Servant.Utils.Text

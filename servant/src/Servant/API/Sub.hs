@@ -9,6 +9,7 @@ import Data.String.Conversions
 import GHC.TypeLits
 import Network.Wai
 import Servant.Client
+import Servant.Common.Req
 import Servant.Docs
 import Servant.Server
 

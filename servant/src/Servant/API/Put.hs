@@ -10,12 +10,12 @@ import Data.Proxy
 import Data.String.Conversions
 import Data.Typeable
 import Network.HTTP.Types
-import Network.URI
 import Network.Wai
 import Servant.Client
+import Servant.Common.BaseUrl
+import Servant.Common.Req
 import Servant.Docs
 import Servant.Server
-import Servant.Utils.Client
 
 -- | Endpoint for PUT requests.
 data Put a
@@ -38,7 +38,7 @@ instance ToJSON a => HasServer (Put a) where
     | otherwise = respond $ failWith NotFound
 
 instance FromJSON a => HasClient (Put a) where
-  type Client (Put a) = URIAuth -> EitherT String IO a
+  type Client (Put a) = BaseUrl -> EitherT String IO a
 
   clientWithRoute Proxy req host =
     performRequest methodPut req 200 host
