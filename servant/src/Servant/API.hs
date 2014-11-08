@@ -17,6 +17,8 @@ module Servant.API (
   -- * Actual endpoints, distinguished by HTTP method
   -- | GET requests
   module Servant.API.Get,
+  -- | GET requests for static files
+  module Servant.API.File,
   -- | POST requests
   module Servant.API.Post,
   -- | DELETE requests
@@ -34,6 +36,7 @@ module Servant.API (
 import Servant.API.Alternative
 import Servant.API.Capture
 import Servant.API.Delete
+import Servant.API.File
 import Servant.API.Get
 import Servant.API.Post
 import Servant.API.Put
