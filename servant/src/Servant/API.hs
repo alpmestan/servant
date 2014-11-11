@@ -19,6 +19,8 @@ module Servant.API (
   module Servant.API.Get,
   -- | GET requests for static files
   module Servant.API.File,
+  -- | GET requests on the content of a whole directory
+  module Servant.API.Dir,
   -- | POST requests
   module Servant.API.Post,
   -- | DELETE requests
@@ -36,6 +38,7 @@ module Servant.API (
 import Servant.API.Alternative
 import Servant.API.Capture
 import Servant.API.Delete
+import Servant.API.Dir
 import Servant.API.File
 import Servant.API.Get
 import Servant.API.Post

@@ -18,6 +18,7 @@ library
     Servant.API.Alternative
     Servant.API.Capture
     Servant.API.Delete
+    Servant.API.Dir
     Servant.API.File
     Servant.API.Get
     Servant.API.Post
