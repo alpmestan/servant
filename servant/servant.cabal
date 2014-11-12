@@ -18,6 +18,8 @@ library
     Servant.API.Alternative
     Servant.API.Capture
     Servant.API.Delete
+    Servant.API.Dir
+    Servant.API.File
     Servant.API.Get
     Servant.API.Post
     Servant.API.Put
@@ -35,25 +37,28 @@ library
     Servant.Utils.Links
   build-depends:
       base >=4.7 && <5
-    , either
     , aeson
     , attoparsec
     , bytestring
+    , either
     , exceptions
-    , string-conversions
-    , split
+    , directory
+    , filepath
+    , hashable
     , http-client
     , http-types
+    , lens
+    , mime-types
     , network-uri >= 2.6
-    , wai
-    , warp
     , safe
-    , transformers
+    , split
+    , string-conversions
     , template-haskell
     , text
-    , lens
+    , transformers
     , unordered-containers
-    , hashable
+    , wai
+    , warp
   hs-source-dirs: src
   default-language: Haskell2010
   ghc-options: -O0 -Wall
@@ -65,12 +70,12 @@ executable greet
   default-language: Haskell2010
   build-depends:
       base
-    , servant
     , aeson
+    , either
+    , servant >= 0.2
+    , text
     , warp
     , wai
-    , either
-    , text
 
 test-suite spec
   type: exitcode-stdio-1.0
