@@ -802,7 +802,20 @@ module Servant.API.Raw
 --   The given <a>Application</a> will get the request as received by the
 --   server, potentially with a modified (stripped) <a>pathInfo</a> if the
 --   <a>Application</a> is being routed with <a>:&gt;</a>.
+--   
+--   In addition to just letting you plug in your existing WAI
+--   <a>Application</a>s, this can also be used with <a>serveDirectory</a>
+--   to serve static files stored in a particular directory on your
+--   filesystem, or to serve your API's documentation with
+--   <a>serveDocumentation</a>.
 data Raw
+
+-- | Just pass the request to the underlying application and serve its
+--   response.
+
+-- | Pick a <a>Method</a> and specify where the server you want to query
+--   is. You get back the status code and the response body as a
+--   <a>ByteString</a>.
 instance HasDocs Raw
 instance HasClient Raw
 instance HasServer Raw
