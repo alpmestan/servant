@@ -389,16 +389,29 @@ instance Hashable Method
 instance Show Method
 
 module Servant.Common.BaseUrl
+
+-- | URI scheme to use
 data Scheme
+
+-- | http://
 Http :: Scheme
+
+-- | https://
 Https :: Scheme
+
+-- | Simple data type to represent the target of HTTP requests for
+--   servant's automatically-generated clients.
 data BaseUrl
 BaseUrl :: Scheme -> String -> Int -> BaseUrl
+
+-- | URI scheme to use
 baseUrlScheme :: BaseUrl -> Scheme
+
+-- | host (eg "haskell.org")
 baseUrlHost :: BaseUrl -> String
+
+-- | port (eg 80)
 baseUrlPort :: BaseUrl -> Int
-showBaseUrl :: BaseUrl -> String
-parseBaseUrl :: String -> Either String BaseUrl
 instance Show Scheme
 instance Eq Scheme
 instance Ord Scheme
