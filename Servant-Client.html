@@ -16,7 +16,7 @@ postNewBook :: Book -&gt; BaseUrl -&gt; EitherT String IO Book
  an additional argument of the type specified by your <code><a href="Servant-API-Capture.html#t:Capture">Capture</a></code>.
  That function will take care of inserting a textual representation
  of this value at the right place in the request path.</p><p>You can control how values for this type are turned into
- text by specifying a <code><a href="Servant-Common-Text.html#t:ToText">ToText</a></code> instance for your type.</p><p>Example:</p><pre>type MyApi = &quot;books&quot; ':&gt;' 'Capture' &quot;isbn&quot; 'Text' ':&gt;' 'Get' Book
+ text by specifying a <code><a href="Servant-Common-Text.html#t:ToText">ToText</a></code> instance for your type.</p><p>Example:</p><pre>type MyApi = &quot;books&quot; :&gt; Capture &quot;isbn&quot; Text :&gt; Get Book
 
 myApi :: Proxy MyApi
 myApi = Proxy
