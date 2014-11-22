@@ -630,7 +630,7 @@ instance ToJSON a => HasServer (Post a)
 
 module Servant.API.Delete
 
--- | Endpoint for DELETE requests.
+-- | Combinator for DELETE requests.
 --   
 --   Example:
 --   
