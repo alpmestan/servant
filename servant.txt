@@ -638,8 +638,6 @@ module Servant.API.Delete
 --              -- DELETE /books/:isbn
 --   type MyApi = "books" :&gt; Capture "isbn" Text :&gt; Delete
 --   </pre>
---   
---   corresponds to a DELETE HTTP request at <tt><i>books</i>:isbn</tt>.
 data Delete
 
 -- | If you have a <a>Delete</a> endpoint in your API, the handler for this
