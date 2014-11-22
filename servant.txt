@@ -631,7 +631,30 @@ instance ToJSON a => HasServer (Post a)
 module Servant.API.Delete
 
 -- | Endpoint for DELETE requests.
+--   
+--   Example:
+--   
+--   <pre>
+--              -- DELETE /books/:isbn
+--   type MyApi = "books" :&gt; Capture "isbn" Text :&gt; Delete
+--   </pre>
+--   
+--   corresponds to a DELETE HTTP request at <tt><i>books</i>:isbn</tt>.
 data Delete
+
+-- | If you have a <a>Delete</a> endpoint in your API, the handler for this
+--   endpoint is meant to delete a resource.
+--   
+--   The code of the handler will, just like for <a>Get</a>, <a>Post</a>
+--   and <a>Put</a>, run in <tt>EitherT (Int, String) IO ()</tt>. The
+--   <a>Int</a> represents the status code and the <a>String</a> a message
+--   to be returned. You can use <a>left</a> to painlessly error out if the
+--   conditions for a successful deletion are not met.
+
+-- | If you have a <a>Delete</a> endpoint in your API, the client side
+--   querying function that is created when calling <a>client</a> will just
+--   require an argument that specifies the scheme, host and port to send
+--   the request to.
 instance Typeable Delete
 instance HasDocs Delete
 instance HasClient Delete
