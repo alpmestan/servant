@@ -610,9 +610,30 @@ instance (FromJSON a, HasServer sublayout) => HasServer (ReqBody a :> sublayout)
 
 module Servant.API.Get
 
--- | Endpoint for simple GET requests. The server doesn't receive any
---   arguments and serves the contained type as JSON.
+-- | Endpoint for simple GET requests. Serves the result as JSON.
+--   
+--   Example:
+--   
+--   <pre>
+--   type MyApi = "books" :&gt; Get [Book]
+--   </pre>
 data Get a
+
+-- | When implementing the handler for a <a>Get</a> endpoint, just like for
+--   <a>Delete</a>, <a>Post</a> and <a>Put</a>, the handler code runs in
+--   the <tt>EitherT (Int, String) IO</tt> monad, where the <a>Int</a>
+--   represents the status code and the <a>String</a> a message, returned
+--   in case of failure. You can quite handily use <a>left</a> to quickly
+--   fail if some conditions are not met.
+--   
+--   If successfully returning a value, we just require that its type has a
+--   <a>ToJSON</a> instance and servant takes care of encoding it for you,
+--   yielding status code 200 along the way.
+
+-- | If you have a <a>Get</a> endpoint in your API, the client side
+--   querying function that is created when calling <a>client</a> will just
+--   require an argument that specifies the scheme, host and port to send
+--   the request to.
 instance Typeable Get
 instance ToSample a => HasDocs (Get a)
 instance FromJSON result => HasClient (Get result)
