@@ -589,22 +589,191 @@ instance (KnownSymbol capture, FromText a, HasServer sublayout) => HasServer (Ca
 
 module Servant.API.QueryParam
 
--- | You must implement:
+-- | Lookup the value associated to the <tt>sym</tt> query string parameter
+--   and try to extract it as a value of type <tt>a</tt>.
 --   
---   <ul>
---   <li>a <tt><a>FromText</a> a</tt> instance for serving</li>
---   <li>a <tt><a>ToText</a> a</tt> instance for (client-side)
---   querying</li>
---   <li>a <tt><a>ToParam</a> (<a>QueryParam</a> sym a)</tt> instance for
---   automatic documentation generation</li>
---   </ul>
+--   Example:
+--   
+--   <pre>
+--   -- /books?author=&lt;author name&gt;
+--   type MyApi = "books" :&gt; QueryParam "author" Text :&gt; Get [Book]
+--   </pre>
 data QueryParam sym a
 
--- | Retrieve a list from the query string.
+-- | If you use <tt><a>QueryParam</a> "author" Text</tt> in one of the
+--   endpoints for your API, this automatically requires your server-side
+--   handler to be a function that takes an argument of type
+--   <tt><a>Maybe</a> <tt>Text</tt></tt>.
+--   
+--   This lets servant worry about looking it up in the query string and
+--   turning it into a value of the type you specify, enclosed in
+--   <a>Maybe</a>, because it may not be there and servant would then hand
+--   you <a>Nothing</a>.
+--   
+--   You can control how it'll be converted from <tt>Text</tt> to your type
+--   by simply providing an instance of <a>FromText</a> for your type.
+--   
+--   Example:
+--   
+--   <pre>
+--   type MyApi = "books" :&gt; QueryParam "author" Text :&gt; Get [Book]
+--   
+--   server :: Server MyApi
+--   server = getBooksBy
+--     where getBooksBy :: Maybe Text -&gt; EitherT (Int, String) IO [Book]
+--           getBooksBy Nothing       = ...return all books...
+--           getBooksBy (Just author) = ...return books by the given author...
+--   </pre>
+
+-- | If you use a <a>QueryParam</a> in one of your endpoints in your API,
+--   the corresponding querying function will automatically take an
+--   additional argument of the type specified by your <a>QueryParam</a>,
+--   enclosed in Maybe.
+--   
+--   If you give Nothing, nothing will be added to the query string.
+--   
+--   If you give a non-<a>Nothing</a> value, this function will take care
+--   of inserting a textual representation of this value in the query
+--   string.
+--   
+--   You can control how values for your type are turned into text by
+--   specifying a <a>ToText</a> instance for your type.
+--   
+--   Example:
+--   
+--   <pre>
+--   type MyApi = "books" :&gt; QueryParam "author" Text :&gt; Get [Book]
+--   
+--   myApi :: Proxy MyApi
+--   myApi = Proxy
+--   
+--   getBooksBy :: Maybe Text -&gt; BaseUrl -&gt; EitherT String IO [Book]
+--   getBooksBy = client myApi
+--   -- then you can just use "getBooksBy" to query that endpoint.
+--   -- 'getBooksBy Nothing' for all books
+--   -- 'getBooksBy (Just "Isaac Asimov")' to get all books by Isaac Asimov
+--   </pre>
+
+-- | Lookup the values associated to the <tt>sym</tt> query string
+--   parameter and try to extract it as a value of type <tt>[a]</tt>. This
+--   is typically meant to support query string parameters of the form
+--   <tt>param[]=val1&amp;param[]=val2</tt> and so on. Note that servant
+--   doesn't actually require the <tt>[]</tt>s and will fetch the values
+--   just fine with <tt>param=val1&amp;param=val2</tt>, too.
+--   
+--   Example:
+--   
+--   <pre>
+--   -- /books?authors[]=&lt;author1&gt;&amp;authors[]=&lt;author2&gt;&amp;...
+--   type MyApi = "books" :&gt; QueryParams "authors" Text :&gt; Get [Book]
+--   </pre>
 data QueryParams sym a
 
--- | Retrieve a value-less boolean from the query string.
-data QueryFlag a
+-- | If you use <tt><a>QueryParams</a> "authors" Text</tt> in one of the
+--   endpoints for your API, this automatically requires your server-side
+--   handler to be a function that takes an argument of type
+--   <tt>[<tt>Text</tt>]</tt>.
+--   
+--   This lets servant worry about looking up 0 or more values in the query
+--   string associated to <tt>authors</tt> and turning each of them into a
+--   value of the type you specify.
+--   
+--   You can control how the individual values are converted from
+--   <tt>Text</tt> to your type by simply providing an instance of
+--   <a>FromText</a> for your type.
+--   
+--   Example:
+--   
+--   <pre>
+--   type MyApi = "books" :&gt; QueryParams "authors" Text :&gt; Get [Book]
+--   
+--   server :: Server MyApi
+--   server = getBooksBy
+--     where getBooksBy :: [Text] -&gt; EitherT (Int, String) IO [Book]
+--           getBooksBy authors = ...return all books by these authors...
+--   </pre>
+
+-- | If you use a <a>QueryParams</a> in one of your endpoints in your API,
+--   the corresponding querying function will automatically take an
+--   additional argument, a list of values of the type specified by your
+--   <a>QueryParams</a>.
+--   
+--   If you give an empty list, nothing will be added to the query string.
+--   
+--   Otherwise, this function will take care of inserting a textual
+--   representation of your values in the query string, under the same
+--   query string parameter name.
+--   
+--   You can control how values for your type are turned into text by
+--   specifying a <a>ToText</a> instance for your type.
+--   
+--   Example:
+--   
+--   <pre>
+--   type MyApi = "books" :&gt; QueryParams "authors" Text :&gt; Get [Book]
+--   
+--   myApi :: Proxy MyApi
+--   myApi = Proxy
+--   
+--   getBooksBy :: [Text] -&gt; BaseUrl -&gt; EitherT String IO [Book]
+--   getBooksBy = client myApi
+--   -- then you can just use "getBooksBy" to query that endpoint.
+--   -- 'getBooksBy []' for all books
+--   -- 'getBooksBy ["Isaac Asimov", "Robert A. Heinlein"]'
+--   --   to get all books by Asimov and Heinlein
+--   </pre>
+
+-- | Lookup a potentially value-less query string parameter with boolean
+--   semantics. If the param <tt>sym</tt> is there without any value, or if
+--   it's there with value "true" or "1", it's interpreted as <a>True</a>.
+--   Otherwise, it's interpreted as <a>False</a>.
+--   
+--   Example:
+--   
+--   <pre>
+--   -- /books?published
+--   type MyApi = "books" :&gt; QueryFlag "published" :&gt; Get [Book]
+--   </pre>
+data QueryFlag sym
+
+-- | If you use <tt><a>QueryFlag</a> "published"</tt> in one of the
+--   endpoints for your API, this automatically requires your server-side
+--   handler to be a function that takes an argument of type <a>Bool</a>.
+--   
+--   Example:
+--   
+--   <pre>
+--   type MyApi = "books" :&gt; QueryFlag "published" :&gt; Get [Book]
+--   
+--   server :: Server MyApi
+--   server = getBooks
+--     where getBooks :: Bool -&gt; EitherT (Int, String) IO [Book]
+--           getBooks onlyPublished = ...return all books, or only the ones that are already published, depending on the argument...
+--   </pre>
+
+-- | If you use a <a>QueryFlag</a> in one of your endpoints in your API,
+--   the corresponding querying function will automatically take an
+--   additional <a>Bool</a> argument.
+--   
+--   If you give <a>False</a>, nothing will be added to the query string.
+--   
+--   Otherwise, this function will insert a value-less query string
+--   parameter under the name associated to your <a>QueryFlag</a>.
+--   
+--   Example:
+--   
+--   <pre>
+--   type MyApi = "books" :&gt; QueryFlag "published" :&gt; Get [Book]
+--   
+--   myApi :: Proxy MyApi
+--   myApi = Proxy
+--   
+--   getBooks :: Bool -&gt; BaseUrl -&gt; EitherT String IO [Book]
+--   getBooks = client myApi
+--   -- then you can just use "getBooks" to query that endpoint.
+--   -- 'getBooksBy False' for all books
+--   -- 'getBooksBy True' to only get _already published_ books
+--   </pre>
 instance (KnownSymbol sym, ToParam (QueryFlag sym), HasDocs sublayout) => HasDocs (QueryFlag sym :> sublayout)
 instance (KnownSymbol sym, HasClient sublayout) => HasClient (QueryFlag sym :> sublayout)
 instance (KnownSymbol sym, HasServer sublayout) => HasServer (QueryFlag sym :> sublayout)

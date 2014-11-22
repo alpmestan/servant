@@ -36,7 +36,49 @@ myApi = Proxy
 
 getBook :: Text -&gt; BaseUrl -&gt; EitherT String IO Book
 getBook = client myApi
--- then you can just use &quot;getBook&quot; to query that endpoint</pre></td></tr><tr><td class="src">(<a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/GHC-TypeLits.html#t:KnownSymbol">KnownSymbol</a> sym, <a href="Servant-Client.html#t:HasClient">HasClient</a> sublayout) =&gt; <a href="Servant-Client.html#t:HasClient">HasClient</a> (<a href="Servant-API-Sub.html#t::-62-">(:&gt;)</a> * (<a href="Servant-API-QueryParam.html#t:QueryFlag">QueryFlag</a> <a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/GHC-TypeLits.html#t:Symbol">Symbol</a> sym) sublayout)</td><td class="doc empty">&nbsp;</td></tr><tr><td class="src">(<a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/GHC-TypeLits.html#t:KnownSymbol">KnownSymbol</a> sym, <a href="Servant-Common-Text.html#t:ToText">ToText</a> a, <a href="Servant-Client.html#t:HasClient">HasClient</a> sublayout) =&gt; <a href="Servant-Client.html#t:HasClient">HasClient</a> (<a href="Servant-API-Sub.html#t::-62-">(:&gt;)</a> * (<a href="Servant-API-QueryParam.html#t:QueryParams">QueryParams</a> <a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/GHC-TypeLits.html#t:Symbol">Symbol</a> * sym a) sublayout)</td><td class="doc empty">&nbsp;</td></tr><tr><td class="src">(<a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/GHC-TypeLits.html#t:KnownSymbol">KnownSymbol</a> sym, <a href="Servant-Common-Text.html#t:ToText">ToText</a> a, <a href="Servant-Client.html#t:HasClient">HasClient</a> sublayout) =&gt; <a href="Servant-Client.html#t:HasClient">HasClient</a> (<a href="Servant-API-Sub.html#t::-62-">(:&gt;)</a> * (<a href="Servant-API-QueryParam.html#t:QueryParam">QueryParam</a> <a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/GHC-TypeLits.html#t:Symbol">Symbol</a> * sym a) sublayout)</td><td class="doc empty">&nbsp;</td></tr><tr><td class="src">(<a href="https://hackage.haskell.org/package/aeson-0.8.0.2/docs/Data-Aeson-Types.html#t:ToJSON">ToJSON</a> a, <a href="Servant-Client.html#t:HasClient">HasClient</a> sublayout) =&gt; <a href="Servant-Client.html#t:HasClient">HasClient</a> (<a href="Servant-API-Sub.html#t::-62-">(:&gt;)</a> * (<a href="Servant-API-ReqBody.html#t:ReqBody">ReqBody</a> * a) sublayout)</td><td class="doc"><p>If you use a <code><a href="Servant-API-ReqBody.html#t:ReqBody">ReqBody</a></code> in one of your endpoints in your API,
+-- then you can just use &quot;getBook&quot; to query that endpoint</pre></td></tr><tr><td class="src">(<a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/GHC-TypeLits.html#t:KnownSymbol">KnownSymbol</a> sym, <a href="Servant-Client.html#t:HasClient">HasClient</a> sublayout) =&gt; <a href="Servant-Client.html#t:HasClient">HasClient</a> (<a href="Servant-API-Sub.html#t::-62-">(:&gt;)</a> * (<a href="Servant-API-QueryParam.html#t:QueryFlag">QueryFlag</a> <a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/GHC-TypeLits.html#t:Symbol">Symbol</a> sym) sublayout)</td><td class="doc"><p>If you use a <code><a href="Servant-API-QueryParam.html#t:QueryFlag">QueryFlag</a></code> in one of your endpoints in your API,
+ the corresponding querying function will automatically take
+ an additional <code><a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/Data-Bool.html#t:Bool">Bool</a></code> argument.</p><p>If you give <code><a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/Data-Bool.html#v:False">False</a></code>, nothing will be added to the query string.</p><p>Otherwise, this function will insert a value-less query string
+ parameter under the name associated to your <code><a href="Servant-API-QueryParam.html#t:QueryFlag">QueryFlag</a></code>.</p><p>Example:</p><pre>type MyApi = &quot;books&quot; :&gt; QueryFlag &quot;published&quot; :&gt; Get [Book]
+
+myApi :: Proxy MyApi
+myApi = Proxy
+
+getBooks :: Bool -&gt; BaseUrl -&gt; EitherT String IO [Book]
+getBooks = client myApi
+-- then you can just use &quot;getBooks&quot; to query that endpoint.
+-- 'getBooksBy False' for all books
+-- 'getBooksBy True' to only get _already published_ books</pre></td></tr><tr><td class="src">(<a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/GHC-TypeLits.html#t:KnownSymbol">KnownSymbol</a> sym, <a href="Servant-Common-Text.html#t:ToText">ToText</a> a, <a href="Servant-Client.html#t:HasClient">HasClient</a> sublayout) =&gt; <a href="Servant-Client.html#t:HasClient">HasClient</a> (<a href="Servant-API-Sub.html#t::-62-">(:&gt;)</a> * (<a href="Servant-API-QueryParam.html#t:QueryParams">QueryParams</a> <a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/GHC-TypeLits.html#t:Symbol">Symbol</a> * sym a) sublayout)</td><td class="doc"><p>If you use a <code><a href="Servant-API-QueryParam.html#t:QueryParams">QueryParams</a></code> in one of your endpoints in your API,
+ the corresponding querying function will automatically take
+ an additional argument, a list of values of the type specified 
+ by your <code><a href="Servant-API-QueryParam.html#t:QueryParams">QueryParams</a></code>.</p><p>If you give an empty list, nothing will be added to the query string.</p><p>Otherwise, this function will take care
+ of inserting a textual representation of your values in the query string,
+ under the same query string parameter name.</p><p>You can control how values for your type are turned into
+ text by specifying a <code><a href="Servant-Common-Text.html#t:ToText">ToText</a></code> instance for your type.</p><p>Example:</p><pre>type MyApi = &quot;books&quot; :&gt; QueryParams &quot;authors&quot; Text :&gt; Get [Book]
+
+myApi :: Proxy MyApi
+myApi = Proxy
+
+getBooksBy :: [Text] -&gt; BaseUrl -&gt; EitherT String IO [Book]
+getBooksBy = client myApi
+-- then you can just use &quot;getBooksBy&quot; to query that endpoint.
+-- 'getBooksBy []' for all books
+-- 'getBooksBy [&quot;Isaac Asimov&quot;, &quot;Robert A. Heinlein&quot;]'
+--   to get all books by Asimov and Heinlein</pre></td></tr><tr><td class="src">(<a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/GHC-TypeLits.html#t:KnownSymbol">KnownSymbol</a> sym, <a href="Servant-Common-Text.html#t:ToText">ToText</a> a, <a href="Servant-Client.html#t:HasClient">HasClient</a> sublayout) =&gt; <a href="Servant-Client.html#t:HasClient">HasClient</a> (<a href="Servant-API-Sub.html#t::-62-">(:&gt;)</a> * (<a href="Servant-API-QueryParam.html#t:QueryParam">QueryParam</a> <a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/GHC-TypeLits.html#t:Symbol">Symbol</a> * sym a) sublayout)</td><td class="doc"><p>If you use a <code><a href="Servant-API-QueryParam.html#t:QueryParam">QueryParam</a></code> in one of your endpoints in your API,
+ the corresponding querying function will automatically take
+ an additional argument of the type specified by your <code><a href="Servant-API-QueryParam.html#t:QueryParam">QueryParam</a></code>,
+ enclosed in Maybe.</p><p>If you give Nothing, nothing will be added to the query string.</p><p>If you give a non-<code><a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/Data-Maybe.html#v:Nothing">Nothing</a></code> value, this function will take care
+ of inserting a textual representation of this value in the query string.</p><p>You can control how values for your type are turned into
+ text by specifying a <code><a href="Servant-Common-Text.html#t:ToText">ToText</a></code> instance for your type.</p><p>Example:</p><pre>type MyApi = &quot;books&quot; :&gt; QueryParam &quot;author&quot; Text :&gt; Get [Book]
+
+myApi :: Proxy MyApi
+myApi = Proxy
+
+getBooksBy :: Maybe Text -&gt; BaseUrl -&gt; EitherT String IO [Book]
+getBooksBy = client myApi
+-- then you can just use &quot;getBooksBy&quot; to query that endpoint.
+-- 'getBooksBy Nothing' for all books
+-- 'getBooksBy (Just &quot;Isaac Asimov&quot;)' to get all books by Isaac Asimov</pre></td></tr><tr><td class="src">(<a href="https://hackage.haskell.org/package/aeson-0.8.0.2/docs/Data-Aeson-Types.html#t:ToJSON">ToJSON</a> a, <a href="Servant-Client.html#t:HasClient">HasClient</a> sublayout) =&gt; <a href="Servant-Client.html#t:HasClient">HasClient</a> (<a href="Servant-API-Sub.html#t::-62-">(:&gt;)</a> * (<a href="Servant-API-ReqBody.html#t:ReqBody">ReqBody</a> * a) sublayout)</td><td class="doc"><p>If you use a <code><a href="Servant-API-ReqBody.html#t:ReqBody">ReqBody</a></code> in one of your endpoints in your API,
  the corresponding querying function will automatically take
  an additional argument of the type specified by your <code><a href="Servant-API-ReqBody.html#t:ReqBody">ReqBody</a></code>.
  That function will take care of encoding this argument as JSON and
