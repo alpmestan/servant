@@ -6,3 +6,5 @@
 
 This library provides a family of combinators to define webservices and automatically generate the documentation and client-side querying functions for each endpoint.
 
+We try to maintain up-to-date docs [here](http://alpmestan.github.io/servant/).
+
