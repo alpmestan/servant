@@ -503,8 +503,21 @@ module Servant.API.Sub
 
 -- | The contained API (second argument) can be found under <tt>("/" ++
 --   path)</tt> (path being the first argument).
+--   
+--   Example:
+--   
+--   <pre>
+--   -- GET /hello/world
+--   -- returning a JSON encoded World value
+--   type MyApi = "hello" :&gt; "world" :&gt; Get World
+--   </pre>
 data (:>) (path :: k) a
 (:>) :: Proxy path -> a -> (:>) a
+
+-- | Make sure the incoming request starts with <tt>"/path"</tt>, strip it
+--   and pass the rest of the request path to <tt>sublayout</tt>.
+
+-- | Make the querying function append <tt>path</tt> to the request path.
 instance (KnownSymbol path, HasDocs sublayout) => HasDocs (path :> sublayout)
 instance (KnownSymbol path, HasClient sublayout) => HasClient (path :> sublayout)
 instance (KnownSymbol path, HasServer sublayout) => HasServer (path :> sublayout)
@@ -643,7 +656,32 @@ module Servant.API.Post
 
 -- | Endpoint for POST requests. The type variable represents the type of
 --   the response body (not the request body, use <a>RQBody</a> for that).
+--   
+--   Example:
+--   
+--   <pre>
+--              -- POST /books
+--              -- with a JSON encoded Book as the request body
+--              -- returning the just-created Book
+--   type MyApi = "books" :&gt; ReqBody Book :&gt; Post Book
+--   </pre>
 data Post a
+
+-- | When implementing the handler for a <a>Post</a> endpoint, just like
+--   for <a>Delete</a>, <a>Get</a> and <a>Put</a>, the handler code runs in
+--   the <tt>EitherT (Int, String) IO</tt> monad, where the <a>Int</a>
+--   represents the status code and the <a>String</a> a message, returned
+--   in case of failure. You can quite handily use <a>left</a> to quickly
+--   fail if some conditions are not met.
+--   
+--   If successfully returning a value, we just require that its type has a
+--   <a>ToJSON</a> instance and servant takes care of encoding it for you,
+--   yielding status code 201 along the way.
+
+-- | If you have a <a>Post</a> endpoint in your API, the client side
+--   querying function that is created when calling <a>client</a> will just
+--   require an argument that specifies the scheme, host and port to send
+--   the request to.
 instance Typeable Post
 instance ToSample a => HasDocs (Post a)
 instance FromJSON a => HasClient (Post a)
@@ -681,8 +719,33 @@ instance HasServer Delete
 
 module Servant.API.Put
 
--- | Endpoint for PUT requests.
+-- | Endpoint for PUT requests, usually used to update a ressource. The
+--   type <tt>a</tt> is the type of the response body that's returned.
+--   
+--   Example:
+--   
+--   <pre>
+--   -- PUT /books/:isbn
+--   -- with a Book as request body, returning the updated Book
+--   type MyApi = "books" :&gt; Capture "isbn" Text :&gt; ReqBody Book :&gt; Put Book
+--   </pre>
 data Put a
+
+-- | When implementing the handler for a <a>Put</a> endpoint, just like for
+--   <a>Delete</a>, <a>Get</a> and <a>Post</a>, the handler code runs in
+--   the <tt>EitherT (Int, String) IO</tt> monad, where the <a>Int</a>
+--   represents the status code and the <a>String</a> a message, returned
+--   in case of failure. You can quite handily use <a>left</a> to quickly
+--   fail if some conditions are not met.
+--   
+--   If successfully returning a value, we just require that its type has a
+--   <a>ToJSON</a> instance and servant takes care of encoding it for you,
+--   yielding status code 200 along the way.
+
+-- | If you have a <a>Put</a> endpoint in your API, the client side
+--   querying function that is created when calling <a>client</a> will just
+--   require an argument that specifies the scheme, host and port to send
+--   the request to.
 instance Typeable Put
 instance ToSample a => HasDocs (Put a)
 instance FromJSON a => HasClient (Put a)
