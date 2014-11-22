@@ -19,7 +19,7 @@ server :: Server MyApi
 server = listAllBooks :&lt;|&gt; postBook
   where listAllBooks = ...
         postBook book = ...</pre></td></tr><tr><td class="src">(<a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/GHC-TypeLits.html#t:KnownSymbol">KnownSymbol</a> capture, <a href="Servant-Common-Text.html#t:FromText">FromText</a> a, <a href="Servant-Server.html#t:HasServer">HasServer</a> sublayout) =&gt; <a href="Servant-Server.html#t:HasServer">HasServer</a> (<a href="Servant-API-Sub.html#t::-62-">(:&gt;)</a> * (<a href="Servant-API-Capture.html#t:Capture">Capture</a> <a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/GHC-TypeLits.html#t:Symbol">Symbol</a> * capture a) sublayout)</td><td class="doc"><p>If you use <code><a href="Servant-API-Capture.html#t:Capture">Capture</a></code> in one of the endpoints for your API,
- this automatically requires your handler to be a function
+ this automatically requires your server-side handler to be a function
  that takes an argument of the type specified by the <code><a href="Servant-API-Capture.html#t:Capture">Capture</a></code>.
  This lets servant worry about getting it from the URL and turning
  it into a value of the type you specify.</p><p>You can control how it'll be converted from <code><a href="https://hackage.haskell.org/package/text-1.2.0.0/docs/Data-Text.html#t:Text">Text</a></code> to your type

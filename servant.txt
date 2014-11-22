@@ -553,7 +553,7 @@ data (:<|>) a b
 --   (getAllBooks :&lt;|&gt; postNewBook) = client myApi
 --   </pre>
 
--- | The generated docs for <tt>a <a>:&lt;|&gt;</a> b</tt> just append the
+-- | The generated docs for <tt>a <a>:&lt;|&gt;</a> b</tt> just appends the
 --   docs for <tt>a</tt> with the docs for <tt>b</tt>.
 instance (HasDocs layout1, HasDocs layout2) => HasDocs (layout1 :<|> layout2)
 instance (HasClient a, HasClient b) => HasClient (a :<|> b)
