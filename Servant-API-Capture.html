@@ -24,5 +24,5 @@ getBook = client myApi
 
 server :: Server MyApi
 server = getBook
-  where getBook :: Text -&gt; 'EitherT' (Int, String) IO Book
+  where getBook :: Text -&gt; EitherT (Int, String) IO Book
         getBook isbn = ...</pre></td></tr><tr><td class="src"><span class="keyword">type</span> <a href="Servant-Client.html#t:Client">Client</a> (<a href="Servant-API-Sub.html#t::-62-">(:&gt;)</a> * (<a href="Servant-API-Capture.html#t:Capture">Capture</a> <a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/GHC-TypeLits.html#t:Symbol">Symbol</a> * capture a) sublayout) = a -&gt; <a href="Servant-Client.html#t:Client">Client</a> sublayout</td><td class="doc empty">&nbsp;</td></tr><tr><td class="src"><span class="keyword">type</span> <a href="Servant-Server.html#t:Server">Server</a> (<a href="Servant-API-Sub.html#t::-62-">(:&gt;)</a> * (<a href="Servant-API-Capture.html#t:Capture">Capture</a> <a href="https://hackage.haskell.org/package/base-4.7.0.1/docs/GHC-TypeLits.html#t:Symbol">Symbol</a> * capture a) sublayout) = a -&gt; <a href="Servant-Server.html#t:Server">Server</a> sublayout</td><td class="doc empty">&nbsp;</td></tr></table></div></div></div></div></div><div id="footer"><p>Produced by <a href="http://www.haskell.org/haddock/">Haddock</a> version 2.15.0</p></div></body></html>

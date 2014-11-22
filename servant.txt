@@ -616,7 +616,56 @@ instance (KnownSymbol sym, ToText a, HasClient sublayout) => HasClient (QueryPar
 instance (KnownSymbol sym, FromText a, HasServer sublayout) => HasServer (QueryParam sym a :> sublayout)
 
 module Servant.API.ReqBody
+
+-- | Extract the request body as a value of type <tt>a</tt>.
+--   
+--   Example:
+--   
+--   <pre>
+--              -- POST /books
+--   type MyApi = "books" :&gt; ReqBody Book :&gt; Post Book
+--   </pre>
 data ReqBody a
+
+-- | If you use <a>ReqBody</a> in one of the endpoints for your API, this
+--   automatically requires your server-side handler to be a function that
+--   takes an argument of the type specified by <a>ReqBody</a>. This lets
+--   servant worry about extracting it from the request and turning it into
+--   a value of the type you specify.
+--   
+--   All it asks is for a <a>FromJSON</a> instance.
+--   
+--   Example:
+--   
+--   <pre>
+--   type MyApi = "books" :&gt; ReqBody Book :&gt; Post Book
+--   
+--   server :: Server MyApi
+--   server = postBook
+--     where postBook :: Book -&gt; EitherT (Int, String) IO Book
+--           postBook book = ...insert into your db...
+--   </pre>
+
+-- | If you use a <a>ReqBody</a> in one of your endpoints in your API, the
+--   corresponding querying function will automatically take an additional
+--   argument of the type specified by your <a>ReqBody</a>. That function
+--   will take care of encoding this argument as JSON and of using it as
+--   the request body.
+--   
+--   All you need is for your type to have a <a>ToJSON</a> instance.
+--   
+--   Example:
+--   
+--   <pre>
+--   type MyApi = "books" :&gt; ReqBody Book :&gt; Post Book
+--   
+--   myApi :: Proxy MyApi
+--   myApi = Proxy
+--   
+--   addBook :: Book -&gt; BaseUrl -&gt; EitherT String IO Book
+--   addBook = client myApi
+--   -- then you can just use "addBook" to query that endpoint
+--   </pre>
 instance (ToSample a, HasDocs sublayout) => HasDocs (ReqBody a :> sublayout)
 instance (ToJSON a, HasClient sublayout) => HasClient (ReqBody a :> sublayout)
 instance (FromJSON a, HasServer sublayout) => HasServer (ReqBody a :> sublayout)
