@@ -5,16 +5,80 @@
 @package servant
 @version 0.2
 
+module Servant.Common.BaseUrl
+
+-- | URI scheme to use
+data Scheme
+
+-- | http://
+Http :: Scheme
+
+-- | https://
+Https :: Scheme
+
+-- | Simple data type to represent the target of HTTP requests for
+--   servant's automatically-generated clients.
+data BaseUrl
+BaseUrl :: Scheme -> String -> Int -> BaseUrl
+
+-- | URI scheme to use
+baseUrlScheme :: BaseUrl -> Scheme
+
+-- | host (eg "haskell.org")
+baseUrlHost :: BaseUrl -> String
+
+-- | port (eg 80)
+baseUrlPort :: BaseUrl -> Int
+showBaseUrl :: BaseUrl -> String
+parseBaseUrl :: String -> Either String BaseUrl
+instance Show Scheme
+instance Eq Scheme
+instance Ord Scheme
+instance Generic Scheme
+instance Show BaseUrl
+instance Eq BaseUrl
+instance Ord BaseUrl
+instance Generic BaseUrl
+instance Datatype D1Scheme
+instance Constructor C1_0Scheme
+instance Constructor C1_1Scheme
+instance Datatype D1BaseUrl
+instance Constructor C1_0BaseUrl
+instance Selector S1_0_0BaseUrl
+instance Selector S1_0_1BaseUrl
+instance Selector S1_0_2BaseUrl
+
+module Servant.Common.Req
+data Req
+Req :: String -> QueryText -> ByteString -> Req
+reqPath :: Req -> String
+qs :: Req -> QueryText
+reqBody :: Req -> ByteString
+defReq :: Req
+appendToPath :: String -> Req -> Req
+appendToQueryString :: Text -> Maybe Text -> Req -> Req
+setRQBody :: ByteString -> Req -> Req
+reqToRequest :: (Functor m, MonadThrow m) => Req -> BaseUrl -> m Request
+__manager :: MVar Manager
+__withGlobalManager :: (Manager -> IO a) -> IO a
+displayHttpRequest :: Method -> String
+performRequest :: Method -> Req -> (Int -> Bool) -> BaseUrl -> EitherT String IO (Int, ByteString)
+performRequestJSON :: FromJSON result => Method -> Req -> Int -> BaseUrl -> EitherT String IO result
+catchStatusCodeException :: IO a -> IO (Either Status a)
+
+-- | Like <a>decode</a> but allows all JSON values instead of just objects
+--   and arrays.
+decodeLenient :: FromJSON a => ByteString -> Either String a
+
 module Servant.Common.Text
 
--- | For getting values from url captures, get parameters
+-- | For getting values from url captures and query string parameters
 class FromText a
 fromText :: FromText a => Text -> Maybe a
 
--- | For putting values in paths, get parameters
+-- | For putting values in paths and query string parameters
 class ToText a
 toText :: ToText a => a -> Text
-runReader :: Reader a -> Text -> Maybe a
 instance ToText Float
 instance FromText Float
 instance ToText Double
@@ -388,86 +452,60 @@ instance Show Endpoint
 instance Hashable Method
 instance Show Method
 
-module Servant.Common.BaseUrl
 
--- | URI scheme to use
-data Scheme
-
--- | http://
-Http :: Scheme
-
--- | https://
-Https :: Scheme
-
--- | Simple data type to represent the target of HTTP requests for
---   servant's automatically-generated clients.
-data BaseUrl
-BaseUrl :: Scheme -> String -> Int -> BaseUrl
-
--- | URI scheme to use
-baseUrlScheme :: BaseUrl -> Scheme
-
--- | host (eg "haskell.org")
-baseUrlHost :: BaseUrl -> String
-
--- | port (eg 80)
-baseUrlPort :: BaseUrl -> Int
-instance Show Scheme
-instance Eq Scheme
-instance Ord Scheme
-instance Generic Scheme
-instance Show BaseUrl
-instance Eq BaseUrl
-instance Ord BaseUrl
-instance Generic BaseUrl
-instance Datatype D1Scheme
-instance Constructor C1_0Scheme
-instance Constructor C1_1Scheme
-instance Datatype D1BaseUrl
-instance Constructor C1_0BaseUrl
-instance Selector S1_0_0BaseUrl
-instance Selector S1_0_1BaseUrl
-instance Selector S1_0_2BaseUrl
-
-module Servant.Common.Req
-data Req
-Req :: String -> QueryText -> ByteString -> Req
-reqPath :: Req -> String
-qs :: Req -> QueryText
-reqBody :: Req -> ByteString
-defReq :: Req
-appendToPath :: String -> Req -> Req
-appendToQueryString :: Text -> Maybe Text -> Req -> Req
-setRQBody :: ByteString -> Req -> Req
-reqToRequest :: (Functor m, MonadThrow m) => Req -> BaseUrl -> m Request
-__manager :: MVar Manager
-__withGlobalManager :: (Manager -> IO a) -> IO a
-displayHttpRequest :: Method -> String
-performRequest :: Method -> Req -> (Int -> Bool) -> BaseUrl -> EitherT String IO (Int, ByteString)
-performRequestJSON :: FromJSON result => Method -> Req -> Int -> BaseUrl -> EitherT String IO result
-catchStatusCodeException :: IO a -> IO (Either Status a)
-
--- | Like <a>decode</a> but allows all JSON values instead of just objects
---   and arrays.
-decodeLenient :: FromJSON a => ByteString -> Either String a
-
+-- | This module provides <a>client</a> which can automatically generate
+--   querying functions for each endpoint just from the type representing
+--   your API.
 module Servant.Client
 
 -- | <a>client</a> allows you to produce operations to query an API from a
 --   client.
+--   
+--   <pre>
+--   type MyApi = "books" :&gt; Get [Book] -- GET /books
+--           :&lt;|&gt; "books" :&gt; ReqBody Book :&gt; Post Book -- POST /books
+--   
+--   myApi :: Proxy MyApi
+--   myApi = Proxy
+--   
+--   getAllBooks :: BaseUrl -&gt; EitherT String IO [Book]
+--   postNewBook :: Book -&gt; BaseUrl -&gt; EitherT String IO Book
+--   (getAllBooks :&lt;|&gt; postNewBook) = client myApi
+--   </pre>
 client :: HasClient layout => Proxy layout -> Client layout
+
+-- | This class lets us define how each API combinator influences the
+--   creation of an HTTP request. Use <a>client</a> directly, this class
+--   implements the client-side behavior of each combinator but you don't
+--   have to worry about it.
 class HasClient layout where type family Client layout :: *
 clientWithRoute :: HasClient layout => Proxy layout -> Req -> Client layout
 
 
--- | This module lets you implement <a>Server</a>s for defined APIs. You
---   will probably need <a>serve</a> (and look at the <a>HasServer</a> type
---   family), but <a>toApplication</a> and <a>route</a> are rather
---   internals.
+-- | This module lets you implement <a>Server</a>s for defined APIs. You'll
+--   most likely just need <a>serve</a>.
 module Servant.Server
 
 -- | <a>serve</a> allows you to implement an API and produce a wai
 --   <a>Application</a>.
+--   
+--   Example:
+--   
+--   <pre>
+--   type MyApi = "books" :&gt; Get [Book] -- GET /books
+--           :&lt;|&gt; "books" :&gt; ReqBody Book :&gt; Post Book -- POST /books
+--   
+--   server :: Server MyApi
+--   server = listAllBooks :&lt;|&gt; postBook
+--     where listAllBooks = ...
+--           postBook book = ...
+--   
+--   app :: Application
+--   app = serve myApi server
+--   
+--   main :: IO ()
+--   main = Network.Wai.Handler.Warp.run 8080 app
+--   </pre>
 serve :: HasServer layout => Proxy layout -> Server layout -> Application
 toApplication :: RoutingApplication -> Application
 data RouteMismatch
@@ -1060,11 +1098,11 @@ instance HasDocs Raw
 instance HasClient Raw
 instance HasServer Raw
 
-module Servant.API
-
 module Servant.Utils.StaticFiles
 serveDirectory :: FilePath -> Server Raw
 serveDocumentation :: HasDocs api => Proxy api -> Server Raw
+
+module Servant.API
 
 module Servant
 
