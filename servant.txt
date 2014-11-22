@@ -812,6 +812,15 @@ data Raw
 
 -- | Just pass the request to the underlying application and serve its
 --   response.
+--   
+--   Example:
+--   
+--   <pre>
+--   type MyApi = "images" :&gt; Raw
+--   
+--   server :: Server MyApi
+--   server = serveDirectory "/var/www/images"
+--   </pre>
 
 -- | Pick a <a>Method</a> and specify where the server you want to query
 --   is. You get back the status code and the response body as a
