@@ -1036,12 +1036,12 @@ instance ToJSON a => HasServer (Put a)
 --   
 --   <pre>
 --        "hello" :&gt; ReqBody String :&gt; Put ()
---   :<a>|</a> "hello" :&gt; Capture "p" Int :&gt; ReqBody String :&gt; Post ()
---   :<a>|</a> "hello" :&gt; QueryParam "name" String :&gt; Get Int
+--   :&lt;|&gt; "hello" :&gt; Capture "p" Int :&gt; ReqBody String :&gt; Post ()
+--   :&lt;|&gt; "hello" :&gt; QueryParam "name" String :&gt; Get Int
 --   </pre>
 --   
---   Note the <a>/</a> before a <a>QueryParam</a>!
-module Servant.Utils.ApiQuasiQuoting
+--   Note the <tt>/</tt> before a <tt>QueryParam</tt>!
+module Servant.QQ
 
 -- | Finally-tagless encoding for our DSL. Keeping <tt>repr'</tt> and
 --   <tt>repr</tt> distinct when writing functions with an <tt>ExpSYM</tt>
@@ -1077,19 +1077,21 @@ parseAll :: Parser Type
 --   
 --   <ul>
 --   <li><tt>...<i><a>var</a>:<a>type</a></i>...</tt> becomes a
---   capture<ul><li><tt>.../?<a>var</a>:<a>type</a></tt> becomes a query
---   parameter</li><li><tt><a>method</a> ... <a>typ</a></tt> becomes a
---   method returning <tt><a>typ</a></tt></li><li><tt><a>method</a> ...
---   <a>typ1</a> -&gt; <a>typ2</a></tt> becomes a method with request body
---   of <tt><a>typ1</a></tt> and returning
---   <tt><a>typ2</a></tt></li></ul></li>
+--   capture</li>
+--   <li><tt>.../?<a>var</a>:<a>type</a></tt> becomes a query
+--   parameter</li>
+--   <li><tt><a>method</a> ... <a>typ</a></tt> becomes a method returning
+--   <tt><a>typ</a></tt></li>
+--   <li><tt><a>method</a> ... <a>typ1</a> -&gt; <a>typ2</a></tt> becomes a
+--   method with request body of <tt><a>typ1</a></tt> and returning
+--   <tt><a>typ2</a></tt></li>
 --   </ul>
 --   
 --   Comments are allowed, and have the standard Haskell format
 --   
 --   <ul>
---   <li><tt>--</tt> for inline<ul><li><tt>{- ... -}</tt> for
---   block</li></ul></li>
+--   <li><tt>--</tt> for inline</li>
+--   <li><tt>{- ... -}</tt> for block</li>
 --   </ul>
 sitemap :: QuasiQuoter
 instance ExpSYM Type Type
@@ -1097,19 +1099,25 @@ instance ExpSYM Type Type
 
 -- | Type safe internal links.
 --   
---   Provides the function <a>mkLink</a>: @ type API = Proxy ("hello" :&gt;
---   Get Int :<a>|</a> "bye" :&gt; QueryParam "name" String :&gt; Post
---   Bool)
+--   Provides the function <a>mkLink</a>:
 --   
---   api :: API api = proxy
+--   <pre>
+--   type API = Proxy ("hello" :&gt; Get Int
+--                :<a>|</a> "bye" :&gt; QueryParam "name" String :&gt; Post Bool)
 --   
---   link1 :: Proxy ("hello" :&gt; Get Int) link1 = proxy
+--   api :: API
+--   api = proxy
 --   
---   link2 :: Proxy ("hello" :&gt; Delete) link2 = proxy
+--   link1 :: Proxy ("hello" :&gt; Get Int)
+--   link1 = proxy
 --   
---   mkLink link1 API -- typechecks, returns 'Link "/hello"'
+--   link2 :: Proxy ("hello" :&gt; Delete)
+--   link2 = proxy
 --   
---   mkLink link2 API -- doesn't typecheck @
+--   mkLink link1 API  --  typechecks, returns 'Link "/hello"'
+--   
+--   mkLink link2  API  -- doesn't typecheck
+--   </pre>
 --   
 --   That is, <a>mkLink</a> takes two arguments, a link proxy and a
 --   sitemap, and returns a <a>Link</a>, but only typechecks if the link
