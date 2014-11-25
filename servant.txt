@@ -1099,7 +1099,7 @@ instance HasServer Raw
 
 
 -- | This module defines sever-side handlers that let you serve static
---   files.
+--   files and your API's docs.
 --   
 --   <ul>
 --   <li><a>serveDirectory</a> lets you serve anything that lives under a
@@ -1108,7 +1108,44 @@ instance HasServer Raw
 --   the docs for your API.</li>
 --   </ul>
 module Servant.Utils.StaticFiles
+
+-- | Serve anything under the specified directory as a <a>Raw</a> endpoint.
+--   
+--   <pre>
+--   type MyApi = "static" :&gt; Raw
+--   
+--   server :: Server MyApi
+--   server = serveDirectory "/var/www"
+--   </pre>
+--   
+--   would capture any request to <tt>/static/&lt;something&gt;</tt> and
+--   look for <tt>&lt;something&gt;</tt> under <tt>/var/www</tt>.
+--   
+--   It will do its best to guess the MIME type for that file, based on the
+--   extension, and send an appropriate <i>Content-Type</i> header if
+--   possible.
+--   
+--   If your goal is to serve HTML, CSS and Javascript files that use the
+--   rest of the API as a webapp backend, you will most likely not want the
+--   static files to be hidden behind a <i>/static/</i> prefix. In that
+--   case, remember to put the <a>serveDirectory</a> handler in the last
+--   position, because <i>servant</i> will try to match the handlers in
+--   order.
 serveDirectory :: FilePath -> Server Raw
+
+-- | Serve your API's docs as markdown embedded in an html &lt;pre&gt; tag.
+--   
+--   <pre>
+--   type MyApi = "users" :&gt; Get [User]
+--           :&lt;|&gt; "docs   :&gt; Raw
+--   
+--   apiProxy :: Proxy MyApi
+--   apiProxy = Proxy
+--   
+--   server :: Server MyApi
+--   server = listUsers
+--       :&lt;|&gt; serveDocumentation apiProxy
+--   </pre>
 serveDocumentation :: HasDocs api => Proxy api -> Server Raw
 
 module Servant.API
