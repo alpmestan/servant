@@ -1,7 +1,8 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -fno-warn-unused-do-bind #-}
@@ -45,21 +46,31 @@ import Servant.API.Sub
 import Servant.API.Alternative
 
 -- | Finally-tagless encoding for our DSL.
--- Keeping 'repr'' and 'repr' distinct when writing functions with an
--- @ExpSYM@ context ensures certain invariants (for instance, that there is
+-- Keeping 'repr'' and 'repr' distinct when writing functions with a
+-- @*SYM@ context ensures certain invariants (for instance, that there is
 -- only one of 'get', 'post', 'put', and 'delete' in a value), but
 -- sometimes requires a little more work.
-class ExpSYM repr' repr | repr -> repr', repr' -> repr where
+class LinkSYM repr' repr | repr -> repr', repr' -> repr where
     lit        :: String -> repr' -> repr
-    capture    :: String -> String -> repr -> repr
-    reqBody    :: String -> repr -> repr
-    queryParam :: String -> String -> repr -> repr
-    conj       :: repr' -> repr -> repr
     get        :: String -> repr
     post       :: String -> repr
     put        :: String -> repr
     delete     :: String -> repr
+    conj       :: repr' -> repr -> repr
 
+-- | Extra aspects that go into routes but not links.
+class RouteSYM repr' repr | repr -> repr', repr' -> repr where
+    capture    :: String -> String -> repr -> repr
+    reqBody    :: String -> repr -> repr
+    queryParam :: String -> String -> repr -> repr
+
+-- | Multiple LinkSYM and/or RouteSYM.
+class MultiSYM repr' repr | repr -> repr', repr' -> repr where
+    alt        :: repr -> repr -> repr     -- ^ @(:<|>)@
+
+-- | Things that belong *only* to the link QQ. E.g. adding 'Proxy'.
+class LinkExtraSYM repr' repr | repr -> repr', repr' -> repr where
+    proxy      :: repr' -> repr
 
 infixr 6 >:
 
@@ -67,13 +78,14 @@ infixr 6 >:
 (>:) = conj
 
 
-instance ExpSYM Type Type where
-    lit name r         = LitT (StrTyLit name) >: r
+instance RouteSYM Type Type where
     capture name typ r = AppT (AppT (ConT ''Capture) (LitT (StrTyLit name)))
                                (ConT $ mkName typ) >: r
     reqBody typ r      = AppT (ConT ''ReqBody) (ConT $ mkName typ) >: r
     queryParam name typ r = AppT (AppT (ConT ''QueryParam) (LitT (StrTyLit name)))
                                (ConT $ mkName typ) >: r
+instance LinkSYM Type Type where
+    lit name r         = LitT (StrTyLit name) >: r
     conj x             = AppT (AppT (ConT ''(:>)) x)
     get  typ           = AppT (ConT ''Get) (ConT $ mkName typ)
     post typ           = AppT (ConT ''Post) (ConT $ mkName typ)
@@ -81,16 +93,20 @@ instance ExpSYM Type Type where
     delete "()"        = ConT ''Delete
     delete _           = error "Delete does not return a request body"
 
-parseMethod :: ExpSYM repr' repr => Parser (String -> repr)
+instance MultiSYM Type Type where
+    alt a              = AppT (AppT (ConT ''(:<|>)) a)
+
+type RouteLinkSYM r' r = (RouteSYM r' r, LinkSYM r' r)
+
+parseMethod :: LinkSYM repr' repr => Parser (String -> repr)
 parseMethod = try (string "GET"    >> return get)
           <|> try (string "POST"   >> return post)
           <|> try (string "PUT"    >> return put)
           <|> try (string "DELETE" >> return delete)
 
-parseUrlSegment :: ExpSYM repr repr => Parser (repr -> repr)
-parseUrlSegment = try parseCapture
-              <|> try parseQueryParam
-              <|> try parseLit
+parseUrlSegmentRoute :: RouteSYM repr repr => Parser (repr -> repr)
+parseUrlSegmentRoute = try parseCapture
+                   <|> try parseQueryParam
   where
       parseCapture = do
          cname <- many (noneOf " ?/:")
@@ -103,13 +119,26 @@ parseUrlSegment = try parseCapture
          char ':'
          ctyp  <- many (noneOf " ?/:")
          return $ queryParam cname ctyp
+
+parseUrlSegmentLink :: LinkSYM repr' repr => Parser (repr' -> repr)
+parseUrlSegmentLink = try parseLit
+  where
       parseLit = lit <$> many (noneOf " ?/:")
 
-parseUrl :: ExpSYM repr repr => Parser (repr -> repr)
+parseUrlSegment :: RouteLinkSYM repr repr => Parser (repr -> repr)
+parseUrlSegment = try parseUrlSegmentRoute
+              <|> try parseUrlSegmentLink
+
+parseUrl :: RouteLinkSYM repr repr => Parser (repr -> repr)
 parseUrl = do
     optional $ char '/'
     url <- parseUrlSegment `sepBy1` char '/'
     return $ foldr1 (.) url
+
+{-parseLink :: ( LinkSYM repr' repr'-}
+             {-, LinkExtraSYM repr' repr-}
+             {-) => Parser repr-}
+{-parseLink = parseUrlSegmentLink >>= proxy-}
 
 data Typ = Val String
          | ReqArgVal String String
@@ -133,7 +162,7 @@ parseTyp = do
     stripTr = reverse . dropWhile (== ' ') . reverse
 
 
-parseEntry :: ExpSYM repr repr => Parser repr
+parseEntry :: RouteLinkSYM repr repr => Parser repr
 parseEntry = do
     met <- parseMethod
     spaces
