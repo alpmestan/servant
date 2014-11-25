@@ -150,7 +150,6 @@ instance FromText Text
 --   import Data.Proxy
 --   import Data.Text
 --   import Servant
---   import Servant.Docs
 --   
 --   -- our type for a Greeting message
 --   data Greet = Greet { _msg :: Text }
@@ -162,7 +161,7 @@ instance FromText Text
 --   
 --   -- we provide a sample value for the 'Greet' type
 --   instance ToSample Greet where
---     toSample Proxy = Just (encode g)
+--     toSample = Just g
 --   
 --       where g = Greet "Hello, haskeller!"
 --   
@@ -232,7 +231,7 @@ markdown :: API -> String
 --   instance ToJSON Greet
 --   
 --   instance ToSample Greet where
---     toSample Proxy = Just (encode g)
+--     toSample = Just g
 --   
 --       where g = Greet "Hello, haskeller!"
 --   </pre>
@@ -1098,6 +1097,16 @@ instance HasDocs Raw
 instance HasClient Raw
 instance HasServer Raw
 
+
+-- | This module defines sever-side handlers that let you serve static
+--   files.
+--   
+--   <ul>
+--   <li><a>serveDirectory</a> lets you serve anything that lives under a
+--   particular directory on your filesystem.</li>
+--   <li><a>serveDocumentation</a> lets you serve the markdown-version of
+--   the docs for your API.</li>
+--   </ul>
 module Servant.Utils.StaticFiles
 serveDirectory :: FilePath -> Server Raw
 serveDocumentation :: HasDocs api => Proxy api -> Server Raw
