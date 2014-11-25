@@ -1019,7 +1019,35 @@ instance ToSample a => HasDocs (Put a)
 instance FromJSON a => HasClient (Put a)
 instance ToJSON a => HasServer (Put a)
 
+
+-- | QuasiQuoting utilities for API types.
+--   
+--   <a>sitemap</a> allows you to write your type in a very natural way:
+--   
+--   <pre>
+--   [sitemap|
+--   PUT        hello                 String -&gt; ()
+--   POST       hello/p:Int           String -&gt; ()
+--   GET        hello/?name:String    Int
+--   |]
+--   </pre>
+--   
+--   Will generate:
+--   
+--   <pre>
+--        "hello" :&gt; ReqBody String :&gt; Put ()
+--   :<a>|</a> "hello" :&gt; Capture "p" Int :&gt; ReqBody String :&gt; Post ()
+--   :<a>|</a> "hello" :&gt; QueryParam "name" String :&gt; Get Int
+--   </pre>
+--   
+--   Note the <a>/</a> before a <a>QueryParam</a>!
 module Servant.Utils.ApiQuasiQuoting
+
+-- | Finally-tagless encoding for our DSL. Keeping <tt>repr'</tt> and
+--   <tt>repr</tt> distinct when writing functions with an <tt>ExpSYM</tt>
+--   context ensures certain invariants (for instance, that there is only
+--   one of <a>get</a>, <a>post</a>, <a>put</a>, and <a>delete</a> in a
+--   value), but sometimes requires a little more work.
 class ExpSYM repr' repr | repr -> repr', repr' -> repr
 lit :: ExpSYM repr' repr => String -> repr' -> repr
 capture :: ExpSYM repr' repr => String -> String -> repr -> repr
@@ -1044,9 +1072,51 @@ inlineComment :: Parser ()
 eol :: Parser String
 eols :: Parser ()
 parseAll :: Parser Type
+
+-- | The sitemap QuasiQuoter.
+--   
+--   <ul>
+--   <li><tt>...<i><a>var</a>:<a>type</a></i>...</tt> becomes a
+--   capture<ul><li><tt>.../?<a>var</a>:<a>type</a></tt> becomes a query
+--   parameter</li><li><tt><a>method</a> ... <a>typ</a></tt> becomes a
+--   method returning <tt><a>typ</a></tt></li><li><tt><a>method</a> ...
+--   <a>typ1</a> -&gt; <a>typ2</a></tt> becomes a method with request body
+--   of <tt><a>typ1</a></tt> and returning
+--   <tt><a>typ2</a></tt></li></ul></li>
+--   </ul>
+--   
+--   Comments are allowed, and have the standard Haskell format
+--   
+--   <ul>
+--   <li><tt>--</tt> for inline<ul><li><tt>{- ... -}</tt> for
+--   block</li></ul></li>
+--   </ul>
 sitemap :: QuasiQuoter
 instance ExpSYM Type Type
 
+
+-- | Type safe internal links.
+--   
+--   Provides the function <a>mkLink</a>: @ type API = Proxy ("hello" :&gt;
+--   Get Int :<a>|</a> "bye" :&gt; QueryParam "name" String :&gt; Post
+--   Bool)
+--   
+--   api :: API api = proxy
+--   
+--   link1 :: Proxy ("hello" :&gt; Get Int) link1 = proxy
+--   
+--   link2 :: Proxy ("hello" :&gt; Delete) link2 = proxy
+--   
+--   mkLink link1 API -- typechecks, returns 'Link "/hello"'
+--   
+--   mkLink link2 API -- doesn't typecheck @
+--   
+--   That is, <a>mkLink</a> takes two arguments, a link proxy and a
+--   sitemap, and returns a <a>Link</a>, but only typechecks if the link
+--   proxy is a valid link, and part of the sitemap.
+--   
+--   <b>N.B.:</b> <a>mkLink</a> assumes a capture matches any string
+--   (without slashes).
 module Servant.Utils.Links
 
 -- | The 'ValidLinkIn f s' constraint holds when <tt>s</tt> is an API that
@@ -1097,55 +1167,8 @@ instance HasDocs Raw
 instance HasClient Raw
 instance HasServer Raw
 
-
--- | This module defines sever-side handlers that let you serve static
---   files and your API's docs.
---   
---   <ul>
---   <li><a>serveDirectory</a> lets you serve anything that lives under a
---   particular directory on your filesystem.</li>
---   <li><a>serveDocumentation</a> lets you serve the markdown-version of
---   the docs for your API.</li>
---   </ul>
 module Servant.Utils.StaticFiles
-
--- | Serve anything under the specified directory as a <a>Raw</a> endpoint.
---   
---   <pre>
---   type MyApi = "static" :&gt; Raw
---   
---   server :: Server MyApi
---   server = serveDirectory "/var/www"
---   </pre>
---   
---   would capture any request to <tt>/static/&lt;something&gt;</tt> and
---   look for <tt>&lt;something&gt;</tt> under <tt>/var/www</tt>.
---   
---   It will do its best to guess the MIME type for that file, based on the
---   extension, and send an appropriate <i>Content-Type</i> header if
---   possible.
---   
---   If your goal is to serve HTML, CSS and Javascript files that use the
---   rest of the API as a webapp backend, you will most likely not want the
---   static files to be hidden behind a <i>/static/</i> prefix. In that
---   case, remember to put the <a>serveDirectory</a> handler in the last
---   position, because <i>servant</i> will try to match the handlers in
---   order.
 serveDirectory :: FilePath -> Server Raw
-
--- | Serve your API's docs as markdown embedded in an html &lt;pre&gt; tag.
---   
---   <pre>
---   type MyApi = "users" :&gt; Get [User]
---           :&lt;|&gt; "docs   :&gt; Raw
---   
---   apiProxy :: Proxy MyApi
---   apiProxy = Proxy
---   
---   server :: Server MyApi
---   server = listUsers
---       :&lt;|&gt; serveDocumentation apiProxy
---   </pre>
 serveDocumentation :: HasDocs api => Proxy api -> Server Raw
 
 module Servant.API
