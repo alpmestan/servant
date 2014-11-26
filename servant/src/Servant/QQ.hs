@@ -31,6 +31,7 @@ module Servant.QQ where
 
 import Control.Monad (void)
 import Control.Applicative hiding (many, (<|>), optional)
+import Data.Data (Proxy(..))
 import Language.Haskell.TH.Quote
 import Language.Haskell.TH
 import Text.ParserCombinators.Parsec
@@ -44,6 +45,7 @@ import Servant.API.QueryParam
 import Servant.API.ReqBody
 import Servant.API.Sub
 import Servant.API.Alternative
+import Servant.Utils.Links (mkLink)
 
 -- | Finally-tagless encoding for our DSL.
 -- Keeping 'repr'' and 'repr' distinct when writing functions with a
@@ -96,6 +98,10 @@ instance LinkSYM Type Type where
 instance MultiSYM Type Type where
     alt a              = AppT (AppT (ConT ''(:<|>)) a)
 
+instance LinkExtraSYM Type Exp where
+    proxy r            = AppE (VarE 'mkLink)
+                              (SigE (ConE 'Proxy) (AppT (ConT ''Proxy) r))
+
 type RouteLinkSYM r' r = (RouteSYM r' r, LinkSYM r' r)
 
 parseMethod :: LinkSYM repr' repr => Parser (String -> repr)
@@ -135,10 +141,19 @@ parseUrl = do
     url <- parseUrlSegment `sepBy1` char '/'
     return $ foldr1 (.) url
 
-{-parseLink :: ( LinkSYM repr' repr'-}
-             {-, LinkExtraSYM repr' repr-}
-             {-) => Parser repr-}
-{-parseLink = parseUrlSegmentLink >>= proxy-}
+parseLink :: Parser Exp
+parseLink = do
+    met <- parseMethod
+    spaces
+    seg <- do
+        optional $ char '/'
+        url <- parseUrlSegmentLink `sepBy1` char '/'
+        return $ foldr1 (.) url
+    spaces
+    typ <- parseTyp
+    case typ of
+        Val s -> return $ proxy $ seg  (met s)
+        ReqArgVal i o -> return $ proxy $ seg $ reqBody i (met o)
 
 data Typ = Val String
          | ReqArgVal String String
@@ -225,3 +240,11 @@ sitemap = QuasiQuoter { quoteExp = undefined
                       , quoteDec = undefined
                       }
 
+link :: QuasiQuoter
+link = QuasiQuoter { quoteExp = \x -> case parse parseLink "" x of
+                            Left err -> error $ show err
+                            Right st -> return st
+                   , quotePat = undefined
+                   , quoteType = undefined
+                   , quoteDec = undefined
+                   }
