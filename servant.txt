@@ -5,71 +5,6 @@
 @package servant
 @version 0.2
 
-module Servant.Common.BaseUrl
-
--- | URI scheme to use
-data Scheme
-
--- | http://
-Http :: Scheme
-
--- | https://
-Https :: Scheme
-
--- | Simple data type to represent the target of HTTP requests for
---   servant's automatically-generated clients.
-data BaseUrl
-BaseUrl :: Scheme -> String -> Int -> BaseUrl
-
--- | URI scheme to use
-baseUrlScheme :: BaseUrl -> Scheme
-
--- | host (eg "haskell.org")
-baseUrlHost :: BaseUrl -> String
-
--- | port (eg 80)
-baseUrlPort :: BaseUrl -> Int
-showBaseUrl :: BaseUrl -> String
-parseBaseUrl :: String -> Either String BaseUrl
-instance Show Scheme
-instance Eq Scheme
-instance Ord Scheme
-instance Generic Scheme
-instance Show BaseUrl
-instance Eq BaseUrl
-instance Ord BaseUrl
-instance Generic BaseUrl
-instance Datatype D1Scheme
-instance Constructor C1_0Scheme
-instance Constructor C1_1Scheme
-instance Datatype D1BaseUrl
-instance Constructor C1_0BaseUrl
-instance Selector S1_0_0BaseUrl
-instance Selector S1_0_1BaseUrl
-instance Selector S1_0_2BaseUrl
-
-module Servant.Common.Req
-data Req
-Req :: String -> QueryText -> ByteString -> Req
-reqPath :: Req -> String
-qs :: Req -> QueryText
-reqBody :: Req -> ByteString
-defReq :: Req
-appendToPath :: String -> Req -> Req
-appendToQueryString :: Text -> Maybe Text -> Req -> Req
-setRQBody :: ByteString -> Req -> Req
-reqToRequest :: (Functor m, MonadThrow m) => Req -> BaseUrl -> m Request
-__manager :: MVar Manager
-__withGlobalManager :: (Manager -> IO a) -> IO a
-displayHttpRequest :: Method -> String
-performRequest :: Method -> Req -> (Int -> Bool) -> BaseUrl -> EitherT String IO (Int, ByteString)
-performRequestJSON :: FromJSON result => Method -> Req -> Int -> BaseUrl -> EitherT String IO result
-catchStatusCodeException :: IO a -> IO (Either Status a)
-
--- | Like <a>decode</a> but allows all JSON values instead of just objects
---   and arrays.
-decodeLenient :: FromJSON a => ByteString -> Either String a
-
 module Servant.Common.Text
 
 -- | For getting values from url captures and query string parameters
@@ -111,374 +46,6 @@ instance ToText String
 instance FromText String
 instance ToText Text
 instance FromText Text
-
-
--- | This module lets you get API docs for free. It lets generate an
---   <a>API</a> from the type that represents your API using <a>docs</a>:
---   
---   <pre>
---   docs :: <a>HasDocs</a> api =&gt; <a>Proxy</a> api -&gt; <a>API</a>
---   </pre>
---   
---   You can then call <a>markdown</a> on it:
---   
---   <pre>
---   printMarkdown :: <a>API</a> -&gt; String
---   </pre>
---   
---   or define a custom pretty printer:
---   
---   <pre>
---   yourPrettyDocs :: <a>API</a> -&gt; String -- or blaze-html's HTML, or ...
---   </pre>
---   
---   The only thing you'll need to do will be to implement some classes for
---   your captures, get parameters and request or response bodies.
---   
---   Here's a little (but complete) example that you can run to see the
---   markdown pretty printer in action:
---   
---   <pre>
---   {-# LANGUAGE DataKinds #-}
---   {-# LANGUAGE PolyKinds #-}
---   {-# LANGUAGE TypeFamilies #-}
---   {-# LANGUAGE DeriveGeneric #-}
---   {-# LANGUAGE TypeOperators #-}
---   {-# LANGUAGE FlexibleInstances #-}
---   {-# LANGUAGE OverloadedStrings #-}
---   
---   import Data.Proxy
---   import Data.Text
---   import Servant
---   
---   -- our type for a Greeting message
---   data Greet = Greet { _msg :: Text }
---     deriving (Generic, Show)
---   
---   -- we get our JSON serialization for free
---   instance FromJSON Greet
---   instance ToJSON Greet
---   
---   -- we provide a sample value for the 'Greet' type
---   instance ToSample Greet where
---     toSample = Just g
---   
---       where g = Greet "Hello, haskeller!"
---   
---   instance ToParam (QueryParam "capital" Bool) where
---     toParam _ =
---       DocQueryParam "capital"
---                     ["true", "false"]
---                     "Get the greeting message in uppercase (true) or not (false). Default is false."
---   
---   instance ToCapture (Capture "name" Text) where
---     toCapture _ = DocCapture "name" "name of the person to greet"
---   
---   instance ToCapture (Capture "greetid" Text) where
---     toCapture _ = DocCapture "greetid" "identifier of the greet msg to remove"
---   
---   -- API specification
---   type TestApi =
---          "hello" :&gt; Capture "name" Text :&gt; QueryParam "capital" Bool :&gt; Get Greet
---     :&lt;|&gt; "greet" :&gt; RQBody Greet :&gt; Post Greet
---     :&lt;|&gt; "delete" :&gt; Capture "greetid" Text :&gt; Delete
---   
---   testApi :: Proxy TestApi
---   testApi = Proxy
---   
---   -- Generate the Documentation's ADT
---   greetDocs :: API
---   greetDocs = docs testApi
---   
---   main :: IO ()
---   main = putStrLn $ markdown greetDocs
---   </pre>
-module Servant.Docs
-
--- | The class that abstracts away the impact of API combinators on
---   documentation generation.
-class HasDocs layout
-docsFor :: HasDocs layout => Proxy layout -> (Endpoint, Action) -> API
-
--- | Generate the docs for a given API that implements <a>HasDocs</a>.
-docs :: HasDocs layout => Proxy layout -> API
-
--- | Generate documentation in Markdown format for the given <a>API</a>.
-markdown :: API -> String
-
--- | The class that lets us display a sample JSON input or output when
---   generating documentation for endpoints that either:
---   
---   <ul>
---   <li>expect a request body, or</li>
---   <li>return a non empty response body</li>
---   </ul>
---   
---   Example of an instance:
---   
---   <pre>
---   {-# LANGUAGE DeriveGeneric #-}
---   {-# LANGUAGE OverloadedStrings #-}
---   
---   import Data.Aeson
---   import Data.Text
---   import GHC.Generics
---   
---   data Greet = Greet { _msg :: Text }
---     deriving (Generic, Show)
---   
---   instance FromJSON Greet
---   instance ToJSON Greet
---   
---   instance ToSample Greet where
---     toSample = Just g
---   
---       where g = Greet "Hello, haskeller!"
---   </pre>
-class ToJSON a => ToSample a
-toSample :: ToSample a => Maybe a
-sampleByteString :: ToSample a => Proxy a -> Maybe ByteString
-
--- | The class that helps us automatically get documentation for GET
---   parameters.
---   
---   Example of an instance:
---   
---   <pre>
---   instance ToParam (QueryParam "capital" Bool) where
---     toParam _ =
---       DocQueryParam "capital"
---                     ["true", "false"]
---                     "Get the greeting message in uppercase (true) or not (false). Default is false."
---   </pre>
-class ToParam t
-toParam :: ToParam t => Proxy t -> DocQueryParam
-
--- | The class that helps us automatically get documentation for URL
---   captures.
---   
---   Example of an instance:
---   
---   <pre>
---   instance ToCapture (Capture "name" Text) where
---     toCapture _ = DocCapture "name" "name of the person to greet"
---   </pre>
-class ToCapture c
-toCapture :: ToCapture c => Proxy c -> DocCapture
-
--- | Supported HTTP request methods
-data Method
-
--- | the DELETE method
-DocDELETE :: Method
-
--- | the GET method
-DocGET :: Method
-
--- | the POST method
-DocPOST :: Method
-
--- | the PUT method
-DocPUT :: Method
-
--- | An <a>Endpoint</a> type that holds the <a>path</a> and the
---   <a>method</a>.
---   
---   Gets used as the key in the <a>API</a> hashmap. Modify
---   <a>defEndpoint</a> or any <a>Endpoint</a> value you want using the
---   <a>path</a> and <a>method</a> lenses to tweak.
---   
---   <pre>
---   λ&gt; <a>defEndpoint</a>
---   GET /
---   λ&gt; <a>defEndpoint</a> &amp; <a>path</a> <a>&lt;&gt;~</a> "foo"
---   GET /foo
---   λ&gt; <a>defEndpoint</a> &amp; <a>path</a> <a>&lt;&gt;~</a> "foo" &amp; <a>method</a> <a>.~</a> <a>DocPOST</a>
---   POST /foo
---   </pre>
-data Endpoint
-path :: Lens' Endpoint String
-method :: Lens' Endpoint Method
-
--- | An <a>Endpoint</a> whose path is `"/"` and whose method is
---   <a>DocGET</a>
---   
---   Here's how you can modify it:
---   
---   <pre>
---   λ&gt; <a>defEndpoint</a>
---   GET /
---   λ&gt; <a>defEndpoint</a> &amp; <a>path</a> <a>&lt;&gt;~</a> "foo"
---   GET /foo
---   λ&gt; <a>defEndpoint</a> &amp; <a>path</a> <a>&lt;&gt;~</a> "foo" &amp; <a>method</a> <a>.~</a> <a>DocPOST</a>
---   POST /foo
---   </pre>
-defEndpoint :: Endpoint
-
--- | Our API type, a good old hashmap from <a>Endpoint</a> to <a>Action</a>
-type API = HashMap Endpoint Action
-
--- | An empty <a>API</a>
-emptyAPI :: API
-
--- | A type to represent captures. Holds the name of the capture and a
---   description.
---   
---   Write a <a>ToCapture</a> instance for your captured types.
-data DocCapture
-DocCapture :: String -> String -> DocCapture
-_capSymbol :: DocCapture -> String
-_capDesc :: DocCapture -> String
-capSymbol :: Lens' DocCapture String
-capDesc :: Lens' DocCapture String
-
--- | A type to represent a <i>GET</i> parameter from the Query String.
---   Holds its name, the possible values (leave empty if there isn't a
---   finite number of them), and a description of how it influences the
---   output or behavior.
---   
---   Write a <a>ToParam</a> instance for your GET parameter types
-data DocQueryParam
-DocQueryParam :: String -> [String] -> String -> ParamKind -> DocQueryParam
-_paramName :: DocQueryParam -> String
-_paramValues :: DocQueryParam -> [String]
-_paramDesc :: DocQueryParam -> String
-_paramKind :: DocQueryParam -> ParamKind
-
--- | Type of GET parameter:
---   
---   <ul>
---   <li>Normal corresponds to <tt>QueryParam</tt>, i.e your usual GET
---   parameter</li>
---   <li>List corresponds to <tt>QueryParams</tt>, i.e GET parameters with
---   multiple values</li>
---   <li>Flag corresponds to <tt>QueryFlag</tt>, i.e a value-less GET
---   parameter</li>
---   </ul>
-data ParamKind
-Normal :: ParamKind
-List :: ParamKind
-Flag :: ParamKind
-paramName :: Lens' DocQueryParam String
-paramValues :: Lens' DocQueryParam [String]
-paramDesc :: Lens' DocQueryParam String
-paramKind :: Lens' DocQueryParam ParamKind
-
--- | A type to represent an HTTP response. Has an <a>Int</a> status and a
---   'Maybe ByteString' response body. Tweak <a>defResponse</a> using the
---   <a>respStatus</a> and <a>respBody</a> lenses if you want.
---   
---   If you want to respond with a non-empty response body, you'll most
---   likely want to write a <a>ToSample</a> instance for the type that'll
---   be represented as some JSON in the response.
---   
---   Can be tweaked with two lenses.
---   
---   <pre>
---   λ&gt; defResponse
---   Response {_respStatus = 200, _respBody = Nothing}
---   λ&gt; defResponse &amp; respStatus .~ 204 &amp; respBody .~ Just "[]"
---   Response {_respStatus = 204, _respBody = Just "[]"}
---   </pre>
-data Response
-respStatus :: Lens' Response Int
-respBody :: Lens' Response (Maybe ByteString)
-
--- | Default response: status code 200, no response body.
---   
---   Can be tweaked with two lenses.
---   
---   <pre>
---   λ&gt; defResponse
---   Response {_respStatus = 200, _respBody = Nothing}
---   λ&gt; defResponse &amp; respStatus .~ 204 &amp; respBody .~ Just "[]"
---   Response {_respStatus = 204, _respBody = Just "[]"}
---   </pre>
-defResponse :: Response
-
--- | A datatype that represents everything that can happen at an endpoint,
---   with its lenses:
---   
---   <ul>
---   <li>List of captures (<a>captures</a>)</li>
---   <li>List of GET parameters (<a>params</a>)</li>
---   <li>What the request body should look like, if any is requested
---   (<a>rqbody</a>)</li>
---   <li>What the response should be if everything goes well
---   (<a>response</a>)</li>
---   </ul>
---   
---   You can tweak an <a>Action</a> (like the default <a>defAction</a>)
---   with these lenses to transform an action and add some information to
---   it.
-data Action
-captures :: Lens' Action [DocCapture]
-params :: Lens' Action [DocQueryParam]
-rqbody :: Lens' Action (Maybe ByteString)
-response :: Lens' Action Response
-defAction :: Action
-
--- | Create an API that's comprised of a single endpoint. <a>API</a> is a
---   <a>Monoid</a>, so combine multiple endpoints with <a>mappend</a> or
---   <a>&lt;&gt;</a>.
-single :: Endpoint -> Action -> API
-instance ToSample ()
-instance Eq Method
-instance Generic Method
-instance Eq Endpoint
-instance Generic Endpoint
-instance Eq DocCapture
-instance Show DocCapture
-instance Eq ParamKind
-instance Show ParamKind
-instance Eq DocQueryParam
-instance Show DocQueryParam
-instance Eq Response
-instance Show Response
-instance Eq Action
-instance Show Action
-instance Datatype D1Method
-instance Constructor C1_0Method
-instance Constructor C1_1Method
-instance Constructor C1_2Method
-instance Constructor C1_3Method
-instance Datatype D1Endpoint
-instance Constructor C1_0Endpoint
-instance Selector S1_0_0Endpoint
-instance Selector S1_0_1Endpoint
-instance Hashable Endpoint
-instance Show Endpoint
-instance Hashable Method
-instance Show Method
-
-
--- | This module provides <a>client</a> which can automatically generate
---   querying functions for each endpoint just from the type representing
---   your API.
-module Servant.Client
-
--- | <a>client</a> allows you to produce operations to query an API from a
---   client.
---   
---   <pre>
---   type MyApi = "books" :&gt; Get [Book] -- GET /books
---           :&lt;|&gt; "books" :&gt; ReqBody Book :&gt; Post Book -- POST /books
---   
---   myApi :: Proxy MyApi
---   myApi = Proxy
---   
---   getAllBooks :: BaseUrl -&gt; EitherT String IO [Book]
---   postNewBook :: Book -&gt; BaseUrl -&gt; EitherT String IO Book
---   (getAllBooks :&lt;|&gt; postNewBook) = client myApi
---   </pre>
-client :: HasClient layout => Proxy layout -> Client layout
-
--- | This class lets us define how each API combinator influences the
---   creation of an HTTP request. Use <a>client</a> directly, this class
---   implements the client-side behavior of each combinator but you don't
---   have to worry about it.
-class HasClient layout where type family Client layout :: *
-clientWithRoute :: HasClient layout => Proxy layout -> Req -> Client layout
 
 
 -- | This module lets you implement <a>Server</a>s for defined APIs. You'll
@@ -566,10 +133,6 @@ data (:>) (path :: k) a
 
 -- | Make sure the incoming request starts with <tt>"/path"</tt>, strip it
 --   and pass the rest of the request path to <tt>sublayout</tt>.
-
--- | Make the querying function append <tt>path</tt> to the request path.
-instance (KnownSymbol path, HasDocs sublayout) => HasDocs (path :> sublayout)
-instance (KnownSymbol path, HasClient sublayout) => HasClient (path :> sublayout)
 instance (KnownSymbol path, HasServer sublayout) => HasServer (path :> sublayout)
 
 module Servant.API.Alternative
@@ -598,28 +161,6 @@ data (:<|>) a b
 --     where listAllBooks = ...
 --           postBook book = ...
 --   </pre>
-
--- | A client querying function for <tt>a <a>:&lt;|&gt;</a> b</tt> will
---   actually hand you one function for querying <tt>a</tt> and another one
---   for querying <tt>b</tt>, stitching them together with
---   <a>:&lt;|&gt;</a>, which really is just like a pair.
---   
---   <pre>
---   type MyApi = "books" :&gt; Get [Book] -- GET /books
---           :&lt;|&gt; "books" :&gt; ReqBody Book :&gt; Post Book -- POST /books
---   
---   myApi :: Proxy MyApi
---   myApi = Proxy
---   
---   getAllBooks :: BaseUrl -&gt; EitherT String IO [Book]
---   postNewBook :: Book -&gt; BaseUrl -&gt; EitherT String IO Book
---   (getAllBooks :&lt;|&gt; postNewBook) = client myApi
---   </pre>
-
--- | The generated docs for <tt>a <a>:&lt;|&gt;</a> b</tt> just appends the
---   docs for <tt>a</tt> with the docs for <tt>b</tt>.
-instance (HasDocs layout1, HasDocs layout2) => HasDocs (layout1 :<|> layout2)
-instance (HasClient a, HasClient b) => HasClient (a :<|> b)
 instance (HasServer a, HasServer b) => HasServer (a :<|> b)
 
 module Servant.API.Capture
@@ -633,8 +174,6 @@ module Servant.API.Capture
 --   type MyApi = "books" :&gt; Capture "isbn" Text :&gt; Get Book
 --   </pre>
 data Capture sym a
-instance (KnownSymbol sym, ToCapture (Capture sym a), HasDocs sublayout) => HasDocs (Capture sym a :> sublayout)
-instance (KnownSymbol capture, ToText a, HasClient sublayout) => HasClient (Capture capture a :> sublayout)
 instance (KnownSymbol capture, FromText a, HasServer sublayout) => HasServer (Capture capture a :> sublayout)
 
 module Servant.API.QueryParam
@@ -673,35 +212,6 @@ data QueryParam sym a
 --     where getBooksBy :: Maybe Text -&gt; EitherT (Int, String) IO [Book]
 --           getBooksBy Nothing       = ...return all books...
 --           getBooksBy (Just author) = ...return books by the given author...
---   </pre>
-
--- | If you use a <a>QueryParam</a> in one of your endpoints in your API,
---   the corresponding querying function will automatically take an
---   additional argument of the type specified by your <a>QueryParam</a>,
---   enclosed in Maybe.
---   
---   If you give Nothing, nothing will be added to the query string.
---   
---   If you give a non-<a>Nothing</a> value, this function will take care
---   of inserting a textual representation of this value in the query
---   string.
---   
---   You can control how values for your type are turned into text by
---   specifying a <a>ToText</a> instance for your type.
---   
---   Example:
---   
---   <pre>
---   type MyApi = "books" :&gt; QueryParam "author" Text :&gt; Get [Book]
---   
---   myApi :: Proxy MyApi
---   myApi = Proxy
---   
---   getBooksBy :: Maybe Text -&gt; BaseUrl -&gt; EitherT String IO [Book]
---   getBooksBy = client myApi
---   -- then you can just use "getBooksBy" to query that endpoint.
---   -- 'getBooksBy Nothing' for all books
---   -- 'getBooksBy (Just "Isaac Asimov")' to get all books by Isaac Asimov
 --   </pre>
 
 -- | Lookup the values associated to the <tt>sym</tt> query string
@@ -743,36 +253,6 @@ data QueryParams sym a
 --           getBooksBy authors = ...return all books by these authors...
 --   </pre>
 
--- | If you use a <a>QueryParams</a> in one of your endpoints in your API,
---   the corresponding querying function will automatically take an
---   additional argument, a list of values of the type specified by your
---   <a>QueryParams</a>.
---   
---   If you give an empty list, nothing will be added to the query string.
---   
---   Otherwise, this function will take care of inserting a textual
---   representation of your values in the query string, under the same
---   query string parameter name.
---   
---   You can control how values for your type are turned into text by
---   specifying a <a>ToText</a> instance for your type.
---   
---   Example:
---   
---   <pre>
---   type MyApi = "books" :&gt; QueryParams "authors" Text :&gt; Get [Book]
---   
---   myApi :: Proxy MyApi
---   myApi = Proxy
---   
---   getBooksBy :: [Text] -&gt; BaseUrl -&gt; EitherT String IO [Book]
---   getBooksBy = client myApi
---   -- then you can just use "getBooksBy" to query that endpoint.
---   -- 'getBooksBy []' for all books
---   -- 'getBooksBy ["Isaac Asimov", "Robert A. Heinlein"]'
---   --   to get all books by Asimov and Heinlein
---   </pre>
-
 -- | Lookup a potentially value-less query string parameter with boolean
 --   semantics. If the param <tt>sym</tt> is there without any value, or if
 --   it's there with value "true" or "1", it's interpreted as <a>True</a>.
@@ -800,38 +280,8 @@ data QueryFlag sym
 --     where getBooks :: Bool -&gt; EitherT (Int, String) IO [Book]
 --           getBooks onlyPublished = ...return all books, or only the ones that are already published, depending on the argument...
 --   </pre>
-
--- | If you use a <a>QueryFlag</a> in one of your endpoints in your API,
---   the corresponding querying function will automatically take an
---   additional <a>Bool</a> argument.
---   
---   If you give <a>False</a>, nothing will be added to the query string.
---   
---   Otherwise, this function will insert a value-less query string
---   parameter under the name associated to your <a>QueryFlag</a>.
---   
---   Example:
---   
---   <pre>
---   type MyApi = "books" :&gt; QueryFlag "published" :&gt; Get [Book]
---   
---   myApi :: Proxy MyApi
---   myApi = Proxy
---   
---   getBooks :: Bool -&gt; BaseUrl -&gt; EitherT String IO [Book]
---   getBooks = client myApi
---   -- then you can just use "getBooks" to query that endpoint.
---   -- 'getBooksBy False' for all books
---   -- 'getBooksBy True' to only get _already published_ books
---   </pre>
-instance (KnownSymbol sym, ToParam (QueryFlag sym), HasDocs sublayout) => HasDocs (QueryFlag sym :> sublayout)
-instance (KnownSymbol sym, HasClient sublayout) => HasClient (QueryFlag sym :> sublayout)
 instance (KnownSymbol sym, HasServer sublayout) => HasServer (QueryFlag sym :> sublayout)
-instance (KnownSymbol sym, ToParam (QueryParams sym a), HasDocs sublayout) => HasDocs (QueryParams sym a :> sublayout)
-instance (KnownSymbol sym, ToText a, HasClient sublayout) => HasClient (QueryParams sym a :> sublayout)
 instance (KnownSymbol sym, FromText a, HasServer sublayout) => HasServer (QueryParams sym a :> sublayout)
-instance (KnownSymbol sym, ToParam (QueryParam sym a), HasDocs sublayout) => HasDocs (QueryParam sym a :> sublayout)
-instance (KnownSymbol sym, ToText a, HasClient sublayout) => HasClient (QueryParam sym a :> sublayout)
 instance (KnownSymbol sym, FromText a, HasServer sublayout) => HasServer (QueryParam sym a :> sublayout)
 
 module Servant.API.ReqBody
@@ -864,29 +314,6 @@ data ReqBody a
 --     where postBook :: Book -&gt; EitherT (Int, String) IO Book
 --           postBook book = ...insert into your db...
 --   </pre>
-
--- | If you use a <a>ReqBody</a> in one of your endpoints in your API, the
---   corresponding querying function will automatically take an additional
---   argument of the type specified by your <a>ReqBody</a>. That function
---   will take care of encoding this argument as JSON and of using it as
---   the request body.
---   
---   All you need is for your type to have a <a>ToJSON</a> instance.
---   
---   Example:
---   
---   <pre>
---   type MyApi = "books" :&gt; ReqBody Book :&gt; Post Book
---   
---   myApi :: Proxy MyApi
---   myApi = Proxy
---   
---   addBook :: Book -&gt; BaseUrl -&gt; EitherT String IO Book
---   addBook = client myApi
---   -- then you can just use "addBook" to query that endpoint
---   </pre>
-instance (ToSample a, HasDocs sublayout) => HasDocs (ReqBody a :> sublayout)
-instance (ToJSON a, HasClient sublayout) => HasClient (ReqBody a :> sublayout)
 instance (FromJSON a, HasServer sublayout) => HasServer (ReqBody a :> sublayout)
 
 module Servant.API.Get
@@ -910,14 +337,7 @@ data Get a
 --   If successfully returning a value, we just require that its type has a
 --   <a>ToJSON</a> instance and servant takes care of encoding it for you,
 --   yielding status code 200 along the way.
-
--- | If you have a <a>Get</a> endpoint in your API, the client side
---   querying function that is created when calling <a>client</a> will just
---   require an argument that specifies the scheme, host and port to send
---   the request to.
 instance Typeable Get
-instance ToSample a => HasDocs (Get a)
-instance FromJSON result => HasClient (Get result)
 instance ToJSON result => HasServer (Get result)
 
 module Servant.API.Post
@@ -945,14 +365,7 @@ data Post a
 --   If successfully returning a value, we just require that its type has a
 --   <a>ToJSON</a> instance and servant takes care of encoding it for you,
 --   yielding status code 201 along the way.
-
--- | If you have a <a>Post</a> endpoint in your API, the client side
---   querying function that is created when calling <a>client</a> will just
---   require an argument that specifies the scheme, host and port to send
---   the request to.
 instance Typeable Post
-instance ToSample a => HasDocs (Post a)
-instance FromJSON a => HasClient (Post a)
 instance ToJSON a => HasServer (Post a)
 
 module Servant.API.Delete
@@ -975,14 +388,7 @@ data Delete
 --   <a>Int</a> represents the status code and the <a>String</a> a message
 --   to be returned. You can use <a>left</a> to painlessly error out if the
 --   conditions for a successful deletion are not met.
-
--- | If you have a <a>Delete</a> endpoint in your API, the client side
---   querying function that is created when calling <a>client</a> will just
---   require an argument that specifies the scheme, host and port to send
---   the request to.
 instance Typeable Delete
-instance HasDocs Delete
-instance HasClient Delete
 instance HasServer Delete
 
 module Servant.API.Put
@@ -1009,14 +415,7 @@ data Put a
 --   If successfully returning a value, we just require that its type has a
 --   <a>ToJSON</a> instance and servant takes care of encoding it for you,
 --   yielding status code 200 along the way.
-
--- | If you have a <a>Put</a> endpoint in your API, the client side
---   querying function that is created when calling <a>client</a> will just
---   require an argument that specifies the scheme, host and port to send
---   the request to.
 instance Typeable Put
-instance ToSample a => HasDocs (Put a)
-instance FromJSON a => HasClient (Put a)
 instance ToJSON a => HasServer (Put a)
 
 
@@ -1167,17 +566,41 @@ data Raw
 --   server :: Server MyApi
 --   server = serveDirectory "/var/www/images"
 --   </pre>
-
--- | Pick a <a>Method</a> and specify where the server you want to query
---   is. You get back the status code and the response body as a
---   <a>ByteString</a>.
-instance HasDocs Raw
-instance HasClient Raw
 instance HasServer Raw
 
+
+-- | This module defines a sever-side handler that lets you serve static
+--   files.
+--   
+--   <ul>
+--   <li><a>serveDirectory</a> lets you serve anything that lives under a
+--   particular directory on your filesystem.</li>
+--   </ul>
 module Servant.Utils.StaticFiles
+
+-- | Serve anything under the specified directory as a <a>Raw</a> endpoint.
+--   
+--   <pre>
+--   type MyApi = "static" :&gt; Raw
+--   
+--   server :: Server MyApi
+--   server = serveDirectory "/var/www"
+--   </pre>
+--   
+--   would capture any request to <tt>/static/&lt;something&gt;</tt> and
+--   look for <tt>&lt;something&gt;</tt> under <tt>/var/www</tt>.
+--   
+--   It will do its best to guess the MIME type for that file, based on the
+--   extension, and send an appropriate <i>Content-Type</i> header if
+--   possible.
+--   
+--   If your goal is to serve HTML, CSS and Javascript files that use the
+--   rest of the API as a webapp backend, you will most likely not want the
+--   static files to be hidden behind a <i>/static/</i> prefix. In that
+--   case, remember to put the <a>serveDirectory</a> handler in the last
+--   position, because <i>servant</i> will try to match the handlers in
+--   order.
 serveDirectory :: FilePath -> Server Raw
-serveDocumentation :: HasDocs api => Proxy api -> Server Raw
 
 module Servant.API
 
