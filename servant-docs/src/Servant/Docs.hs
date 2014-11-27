@@ -1,5 +1,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -11,7 +14,7 @@
 --
 -- You can then call 'markdown' on it:
 --
--- @printMarkdown :: 'API' -> String@
+-- @markdown :: 'API' -> String@
 --
 -- or define a custom pretty printer:
 --
@@ -80,6 +83,9 @@ module Servant.Docs
   ( -- * 'HasDocs' class and key functions
     HasDocs(..), docs, markdown
 
+  {- , -- * Serving the documentation
+    serveDocumentation -}
+
   , -- * Classes you need to implement for your types
     ToSample(..)
   , sampleByteString
@@ -111,6 +117,8 @@ import Data.Monoid
 import Data.Proxy
 import Data.String.Conversions
 import GHC.Generics
+import GHC.TypeLits
+import Servant
 
 import qualified Data.HashMap.Strict as HM
 
@@ -424,3 +432,157 @@ markdown = unlines . concat . map (uncurry printEndpoint) . HM.toList
           (resp ^. respBody &
             maybe [" - No response body\n"]
                   (\b -> " - Response body as below." : jsonStr b))
+
+-- * Instances
+
+-- | The generated docs for @a ':<|>' b@ just appends the docs
+--   for @a@ with the docs for @b@.
+instance (HasDocs layout1, HasDocs layout2)
+      => HasDocs (layout1 :<|> layout2) where
+
+  docsFor Proxy (ep, action) = docsFor p1 (ep, action) <> docsFor p2 (ep, action)
+
+    where p1 :: Proxy layout1
+          p1 = Proxy
+
+          p2 :: Proxy layout2
+          p2 = Proxy
+
+-- | @"books" :> 'Capture' "isbn" Text@ will appear as
+-- @/books/:isbn@ in the docs.
+instance (KnownSymbol sym, ToCapture (Capture sym a), HasDocs sublayout)
+      => HasDocs (Capture sym a :> sublayout) where
+
+  docsFor Proxy (endpoint, action) =
+    docsFor sublayoutP (endpoint', action')
+
+    where sublayoutP = Proxy :: Proxy sublayout
+          captureP = Proxy :: Proxy (Capture sym a)
+
+          action' = over captures (|> toCapture captureP) action
+          endpoint' = over path (\p -> p++"/:"++symbolVal symP) endpoint
+          symP = Proxy :: Proxy sym
+
+
+instance HasDocs Delete where
+  docsFor Proxy (endpoint, action) =
+    single endpoint' action'
+
+    where endpoint' = endpoint & method .~ DocDELETE
+
+          action' = action & response.respBody .~ Nothing
+                           & response.respStatus .~ 204
+
+instance ToSample a => HasDocs (Get a) where
+  docsFor Proxy (endpoint, action) =
+    single endpoint' action'
+
+    where endpoint' = endpoint & method .~ DocGET
+          action' = action & response.respBody .~ sampleByteString p
+          p = Proxy :: Proxy a
+
+instance ToSample a => HasDocs (Post a) where
+  docsFor Proxy (endpoint, action) =
+    single endpoint' action'
+
+    where endpoint' = endpoint & method .~ DocPOST
+
+          action' = action & response.respBody .~ sampleByteString p
+                           & response.respStatus .~ 201
+
+          p = Proxy :: Proxy a
+
+instance ToSample a => HasDocs (Put a) where
+  docsFor Proxy (endpoint, action) =
+    single endpoint' action'
+
+    where endpoint' = endpoint & method .~ DocPUT
+
+          action' = action & response.respBody .~ sampleByteString p
+                           & response.respStatus .~ 200
+
+          p = Proxy :: Proxy a
+
+
+instance (KnownSymbol sym, ToParam (QueryParam sym a), HasDocs sublayout)
+      => HasDocs (QueryParam sym a :> sublayout) where
+
+  docsFor Proxy (endpoint, action) =
+    docsFor sublayoutP (endpoint, action')
+
+    where sublayoutP = Proxy :: Proxy sublayout
+          paramP = Proxy :: Proxy (QueryParam sym a)
+          action' = over params (|> toParam paramP) action
+
+instance (KnownSymbol sym, ToParam (QueryParams sym a), HasDocs sublayout)
+      => HasDocs (QueryParams sym a :> sublayout) where
+
+  docsFor Proxy (endpoint, action) =
+    docsFor sublayoutP (endpoint, action')
+
+    where sublayoutP = Proxy :: Proxy sublayout
+          paramP = Proxy :: Proxy (QueryParams sym a)
+          action' = over params (|> toParam paramP) action
+
+
+instance (KnownSymbol sym, ToParam (QueryFlag sym), HasDocs sublayout)
+      => HasDocs (QueryFlag sym :> sublayout) where
+
+  docsFor Proxy (endpoint, action) =
+    docsFor sublayoutP (endpoint, action')
+
+    where sublayoutP = Proxy :: Proxy sublayout
+          paramP = Proxy :: Proxy (QueryFlag sym)
+          action' = over params (|> toParam paramP) action
+
+instance HasDocs Raw where
+  docsFor _proxy (endpoint, action) =
+    single endpoint action
+
+instance (ToSample a, HasDocs sublayout)
+      => HasDocs (ReqBody a :> sublayout) where
+
+  docsFor Proxy (endpoint, action) =
+    docsFor sublayoutP (endpoint, action')
+
+    where sublayoutP = Proxy :: Proxy sublayout
+
+          action' = action & rqbody .~ sampleByteString p
+          p = Proxy :: Proxy a
+
+instance (KnownSymbol path, HasDocs sublayout) => HasDocs (path :> sublayout) where
+
+  docsFor Proxy (endpoint, action) =
+    docsFor sublayoutP (endpoint', action)
+
+    where sublayoutP = Proxy :: Proxy sublayout
+          endpoint' = endpoint & path <>~ symbolVal pa
+          pa = Proxy :: Proxy path
+
+{-
+
+-- | Serve your API's docs as markdown embedded in an html \<pre> tag.
+--
+-- > type MyApi = "users" :> Get [User]
+-- >         :<|> "docs   :> Raw
+-- >
+-- > apiProxy :: Proxy MyApi
+-- > apiProxy = Proxy
+-- >
+-- > server :: Server MyApi
+-- > server = listUsers
+-- >     :<|> serveDocumentation apiProxy
+serveDocumentation :: HasDocs api => Proxy api -> Server Raw
+serveDocumentation proxy _request respond =
+  respond $ responseLBS ok200 [] $ cs $ toHtml $ markdown $ docs proxy
+
+toHtml :: String -> String
+toHtml md =
+  "<html>" ++
+  "<body>" ++
+  "<pre>" ++
+  md ++
+  "</pre>" ++
+  "</body>" ++
+  "</html>"
+-}

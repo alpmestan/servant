@@ -1,4 +1,4 @@
-name:                servant
+name:                servant-client
 version:             0.2
 -- synopsis:
 -- description:
@@ -14,58 +14,27 @@ tested-with:         GHC >= 7.8
 
 library
   exposed-modules:
-    Servant
-    Servant.API
-    Servant.API.Alternative
-    Servant.API.Capture
-    Servant.API.Delete
-    Servant.API.Get
-    Servant.API.Post
-    Servant.API.Put
-    Servant.API.QueryParam
-    Servant.API.Raw
-    Servant.API.ReqBody
-    Servant.API.Sub
-    Servant.Common.Text
-    Servant.QQ
-    Servant.Server
-    Servant.Utils.Links
-    Servant.Utils.StaticFiles
+    Servant.Client
+    Servant.Common.BaseUrl
+    Servant.Common.Req
   build-depends:
       base >=4.7 && <5
     , aeson
     , attoparsec
     , bytestring
     , either
+    , exceptions
+    , http-client
     , http-types
     , network-uri >= 2.6
-    , parsec
     , safe
-    , split
+    , servant
     , string-conversions
-    , system-filepath
-    , template-haskell
     , text
     , transformers
-    , wai
-    , wai-app-static
-    , warp
   hs-source-dirs: src
   default-language: Haskell2010
   ghc-options: -O0 -Wall
-
-executable greet
-  main-is: greet.hs
-  hs-source-dirs: example
-  ghc-options: -O0 -Wall
-  default-language: Haskell2010
-  build-depends:
-      base
-    , servant
-    , aeson
-    , warp
-    , wai
-    , text
 
 test-suite spec
   type: exitcode-stdio-1.0
@@ -78,20 +47,13 @@ test-suite spec
       base == 4.*
     , aeson
     , bytestring
-    , directory
+    , deepseq
     , either
-    , exceptions
     , hspec == 2.*
-    , hspec-wai
     , http-types
     , network >= 2.6
     , QuickCheck
-    , parsec
     , servant
-    , string-conversions
-    , temporary
-    , text
-    , transformers
+    , servant-client
     , wai
-    , wai-extra
     , warp
