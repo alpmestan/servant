@@ -9,8 +9,6 @@ install:
 script:
   - cd servant && cabal test
   - cd servant-client && cabal test
-  - cd servant-docs && cabal test
-  - cd servant-jquery && cabal test
 
 notifications:
   email:
