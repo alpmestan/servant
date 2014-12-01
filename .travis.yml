@@ -5,6 +5,9 @@ ghc:
 
 env:
   - PACKAGE_DIR=servant
+  - PACKAGE_DIR=servant-client
+  - PACKAGE_DIR=servant-docs
+  - PACKAGE_DIR=servant-jquery
 
 before_install:
   - cd $PACKAGE_DIR
