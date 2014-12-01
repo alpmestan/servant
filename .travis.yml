@@ -3,7 +3,7 @@ language: haskell
 ghc:
   - 7.8
 
-script:
+install:
   - cabal install servant/ servant-client/ servant-docs/ servant-jquery/ --enable-tests
 
 notifications:
