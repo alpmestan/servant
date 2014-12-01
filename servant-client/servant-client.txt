@@ -93,9 +93,8 @@ module Servant.Client
 client :: HasClient layout => Proxy layout -> Client layout
 
 -- | This class lets us define how each API combinator influences the
---   creation of an HTTP request. Use <a>client</a> directly, this class
---   implements the client-side behavior of each combinator but you don't
---   have to worry about it.
+--   creation of an HTTP request. It's mostly an internal class, you can
+--   just use <a>client</a>.
 class HasClient layout where type family Client layout :: *
 clientWithRoute :: HasClient layout => Proxy layout -> Req -> Client layout
 instance (KnownSymbol path, HasClient sublayout) => HasClient (path :> sublayout)
