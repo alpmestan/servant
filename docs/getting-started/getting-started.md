@@ -24,7 +24,7 @@
 
 ## Aha! moment
 
-- What if we could express an API as a (admittedly big) type by composing features together, explicitly mentionning URL captures, GET parameters, request bodies and response types?
+- What if we could express an API as a (admittedly big) type by composing features together, explicitly mentioning URL captures, GET parameters, request bodies and response types?
 - This would in spirit be quite similar to parser combinators à-la [parsec](http://hackage.haskell.org/package/parsec), just at the type level instead -- otherwise we can't exploit the same code for generating a server and the client functions.
 - This would make data dependency explicit for each server-side handler
 - Combinator-based design usually works well.
@@ -42,7 +42,7 @@
     ```
 
 - Use type-level string literals for static fragments of the path and chain literals or other combinators using a simple operator. We named ours `:>.
-    
+
     ``` haskell
     type UserAPI = "users" :> Get [User]
     ```
@@ -119,7 +119,7 @@
 
 - This design means you can extend the servant vocabulary by defining your own types and writing instances for the existing classes for them...
 
-- ... or extend servant's reach by defining a new class and then interpreting all the existing combinators in a way that's specific to your use case through instances of your class. 
+- ... or extend servant's reach by defining a new class and then interpreting all the existing combinators in a way that's specific to your use case through instances of your class.
 
 # Back to real life: writing an actual webservice
 
@@ -179,8 +179,8 @@ type BookApi = "books" :> ReqBody Book :> Post Book  -- POST /books
 server :: Connection -> Server BookApi
 server conn = postBook
          :<|> getBooks
-  
-  where -- the aforementionned 'ReqBody' automatically makes this handler
+
+  where -- the aforementioned 'ReqBody' automatically makes this handler
         -- receive a Book argument
         postBook book = liftIO $ execute conn "insert into books values (?, ?)" book >> return book
         getBooks      = liftIO $ query_ conn "select * from books"
