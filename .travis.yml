@@ -4,7 +4,7 @@ ghc:
   - 7.8
 
 before_install:
-  - cabal install servant servant-client servant-docs servant-jquery --only-dependencies --enable-tests
+  - cabal install servant/ servant-client/ servant-docs/ servant-jquery/ --only-dependencies --enable-tests
 
 install:
   - |
