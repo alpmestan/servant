@@ -16,7 +16,7 @@ library
   exposed-modules:     Servant.JQuery
   other-modules:       Servant.JQuery.Internal
   -- other-extensions:    
-  build-depends:       base >=4.5 && <5, servant >= 0.2, lens >= 4, interpolate
+  build-depends:       base >=4.5 && <5, servant >= 0.2, lens >= 4
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options:         -O2 -Wall
@@ -29,8 +29,8 @@ executable counter
       aeson
     , base
     , filepath
-    , servant
-    , servant-jquery
+    , servant >= 0.2
+    , servant-jquery >= 0.2
     , stm
     , transformers
     , warp

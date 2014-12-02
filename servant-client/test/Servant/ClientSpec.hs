@@ -1,19 +1,22 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Servant.ClientSpec where
 
 import Control.Concurrent
 import Control.Exception
 import Control.Monad.Trans.Either
+import Data.Aeson
 import Data.ByteString.Lazy (ByteString)
 import Data.Char
 import Data.Foldable (forM_)
 import Data.Proxy
 import Data.Typeable
+import GHC.Generics
 import Network.HTTP.Types
 import Network.Socket
 import Network.Wai
@@ -26,7 +29,19 @@ import Servant.API
 import Servant.Client
 import Servant.Server
 
-import Servant.ServerSpec
+-- * test data types
+
+data Person = Person {
+  name :: String,
+  age :: Integer
+ }
+  deriving (Eq, Show, Generic)
+
+instance ToJSON Person
+instance FromJSON Person
+
+alice :: Person
+alice = Person "Alice" 42
 
 type Api =
        "get" :> Get Person
