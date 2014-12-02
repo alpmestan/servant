@@ -1,26 +1,27 @@
+language: haskell
+
 ghc:
   - 7.8
 
 before_install:
-  - cd $PKG
-  - cabal install --only-dependencies --enable-tests
+  - cabal install servant servant-client servant-docs servant-jquery --only-dependencies --enable-tests
 
 install:
-  - cabal configure
-  - cabal build
+  - |
+    for pkg in servant servant-client servant-docs servant-jquery
+    do
+      cd $pkg && cabal install
+    done
+
 
 script:
   - |
-    if [ -d "test" ]; then
-      cabal test
-    fi
-
-env:
-  matrix:
-    - PKG=servant
-    - PKG=servant-client
-    - PKG=servant-docs
-    - PKG=servant-jquery
+    for pkg in servant servant-client servant-docs servant-jquery
+    do
+      if [ -d "$pkg/test" ]; then
+        cd $pkg && cabal configure --enable-tests && cabal test
+      fi
+    done
 
 notifications:
   irc:
