@@ -1,12 +1,34 @@
-language: haskell
-
 ghc:
   - 7.8
 
+before_install:
+  - cd $PKG
+  - cabal install --only-dependencies --enable-tests
+
 install:
-  - cabal install servant/ servant-client/ servant-docs/ servant-jquery/ --enable-tests
+  - cabal configure
+  - cabal build
+
+script:
+  - |
+    if [ -d "test" ]; then
+      cabal test
+    fi
+
+env:
+  matrix:
+    - PKG=servant
+    - PKG=servant-client
+    - PKG=servant-docs
+    - PKG=servant-jquery
 
 notifications:
-  email:
-    - alpmestan@gmail.com
-    - soenke.hahn@zalora.com
+  irc:
+    channels:
+      - "irc.freenode.org#servant"
+    template:
+      - "%{repository}#%{build_number} - %{commit} on %{branch} by %{author}: %{message}"
+      - "Build details: %{build_url} - Change view: %{compare_url}"
+    skip_join: true
+    on_success: change
+    on_failure: always
