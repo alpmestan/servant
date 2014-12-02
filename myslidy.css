@@ -1,0 +1,10 @@
+li code, p code {
+ color: #00428C;
+ background-color: #E4E5E7;
+ padding: 2px;
+ margin: 2px;
+}
+
+li a {
+  color: orange !important;
+}
