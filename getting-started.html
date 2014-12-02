@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <title>Rethinking webservices in Haskell with servant</title>
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; }
+code > span.dt { color: #902000; }
+code > span.dv { color: #40a070; }
+code > span.bn { color: #40a070; }
+code > span.fl { color: #40a070; }
+code > span.ch { color: #4070a0; }
+code > span.st { color: #4070a0; }
+code > span.co { color: #60a0b0; font-style: italic; }
+code > span.ot { color: #007020; }
+code > span.al { color: #ff0000; font-weight: bold; }
+code > span.fu { color: #06287e; }
+code > span.er { color: #ff0000; font-weight: bold; }
+  </style>
+  <link rel="stylesheet" type="text/css" media="screen, projection, print"
+    href="http://www.w3.org/Talks/Tools/Slidy2/styles/slidy.css" />
+  <link rel="stylesheet" type="text/css" media="screen, projection, print"
+   href="myslidy.css" />
+  <script src="http://www.w3.org/Talks/Tools/Slidy2/scripts/slidy.js"
+    charset="utf-8" type="text/javascript"></script>
+</head>
+<body>
+<div class="slide titlepage">
+  <h1 class="title">Rethinking webservices in Haskell with servant</h1>
+  <p class="author">
+
+  </p>
+</div>
+<div id="a-little-bit-of-history" class="titleslide slide section level1"><h1>A little bit of history</h1></div><div id="prologue" class="slide section level2">
+<h1>Prologue</h1>
+<ul>
+<li>For our respective jobs, we needed to be able to spin up quite a lot of webservices, worrying as little as possible about the plumbing</li>
+<li>We needed support for
+<ul>
+<li>url captures: <code>/users/:userid</code> would accept <code>/users/23</code> and pass <code>23</code> to the handler</li>
+<li>get parameters: <code>/users?registered_since=&lt;date&gt;</code>, passing the date (if any is given) to the handler</li>
+<li>request body extraction whenever we need it</li>
+</ul></li>
+<li>A lot of the web frameworks/libraries were too heavy and really more adapted for &quot;big website&quot; development</li>
+<li>Silk's <a href="http://github.com/silkapp/rest">rest</a> is nice, but unsatisfactory to us in terms of minimalism: we wanted to get the boilerplate as close to 0 as possible</li>
+</ul>
+</div><div id="servant-0.1" class="slide section level2">
+<h1>servant 0.1</h1>
+<ul>
+<li>We initially turned to <a href="http://hackage.haskell.org/package/scotty">scotty</a>, because it's minimal while providing everything we needed...</li>
+<li>...and expressed combinations of &quot;get this GET param&quot;, &quot;get the value for this url capture&quot;, &quot;get the request body&quot; and what not as reusable operations</li>
+<li>We could abstract away a lot of the boilerplate, e.g reacting to a missing request body on an endpoint that expects some JSON object there, same for GET parameters and url captures.</li>
+<li>While there were some nice benefits with this approach, we still had to do a fair amount of plumbing, and it just didn't felt &quot;natural&quot;, straighforward.</li>
+<li>In addition to that, we secretly wanted to reflect all these operations in the types, in order to generate client-side code and documentation automatically. And with <code>servant-0.1</code>, that was not possible.</li>
+</ul>
+<blockquote>
+<p>Still not satisfactory.</p>
+</blockquote>
+</div><div id="aha-moment" class="slide section level2">
+<h1>Aha! moment</h1>
+<ul>
+<li>What if we could express an API as a (admittedly big) type by composing features together, explicitly mentionning URL captures, GET parameters, request bodies and response types?</li>
+<li>This would in spirit be quite similar to parser combinators à-la <a href="http://hackage.haskell.org/package/parsec">parsec</a>, just at the type level instead -- otherwise we can't exploit the same code for generating a server and the client functions.</li>
+<li>This would make data dependency explicit for each server-side handler</li>
+<li>Combinator-based design usually works well.</li>
+</ul>
+<blockquote>
+<p>Hmm... Promising.</p>
+</blockquote>
+</div><div id="the-result-webservice-api-combinators-1" class="slide section level2">
+<h1>The result: webservice API combinators (1)</h1>
+<ul>
+<li><p>A type for each request method. <code>Get a</code> means it'll match HTTP GET requests and respond with an <code>a</code> encoded as JSON. Same for <code>Delete</code>, <code>Post</code> and <code>Put</code>.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- an API of a single endpoint, that matches GET request to /</span>
+<span class="co">-- and returns a list of users encoded in JSON</span>
+<span class="kw">type</span> <span class="dt">UserAPI</span> <span class="fu">=</span> <span class="dt">Get</span> [<span class="dt">User</span>]</code></pre></li>
+<li><p>Use type-level string literals for static fragments of the path and chain literals or other combinators using a simple operator. We named ours `:&gt;.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">type</span> <span class="dt">UserAPI</span> <span class="fu">=</span> <span class="st">&quot;users&quot;</span> <span class="fu">:&gt;</span> <span class="dt">Get</span> [<span class="dt">User</span>]</code></pre></li>
+<li><p>Most of the time, <code>:&gt;</code> can be read as <code>/</code>:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- can be read as: GET /users/list-all</span>
+<span class="kw">type</span> <span class="dt">UserAPI</span> <span class="fu">=</span> <span class="st">&quot;users&quot;</span> <span class="fu">:&gt;</span> <span class="st">&quot;list-all&quot;</span> <span class="fu">:&gt;</span> <span class="dt">Get</span> [<span class="dt">User</span>]</code></pre></li>
+</ul>
+</div><div id="the-result-webservice-api-combinators-2" class="slide section level2">
+<h1>The result: webservice API combinators (2)</h1>
+<ul>
+<li><p>Alternative routes/endpoints, expressed as <code>route1 :&lt;|&gt; route2</code> in servant, work like <code>mplus</code>/<code>&lt;|&gt;</code> for parsers: try to match against the first route and if it fails, try the other.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">type</span> <span class="dt">UserAPI</span> <span class="fu">=</span> <span class="st">&quot;users&quot;</span> <span class="fu">:&gt;</span> <span class="st">&quot;list-all&quot;</span> <span class="fu">:&gt;</span> <span class="dt">Get</span> [<span class="dt">User</span>]
+          <span class="fu">:&lt;|&gt;</span> <span class="st">&quot;users&quot;</span> <span class="fu">:&gt;</span> <span class="st">&quot;top-ten&quot;</span> <span class="fu">:&gt;</span> <span class="dt">Get</span> [<span class="dt">User</span>]</code></pre></li>
+<li><p>Explicitly mention URL captures in the type with <code>Capture</code>.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- equivalent to: GET /users/:userid in some web frameworks</span>
+<span class="kw">type</span> <span class="dt">UserAPI</span> <span class="fu">=</span> <span class="st">&quot;users&quot;</span> <span class="fu">:&gt;</span> <span class="dt">Capture</span> <span class="st">&quot;userid&quot;</span> <span class="dt">Int64</span> <span class="fu">:&gt;</span> <span class="dt">Get</span> <span class="dt">User</span></code></pre></li>
+<li><p>Explicitly expect a (typed) request body with <code>ReqBody</code>.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- equivalent to: POST /users</span>
+<span class="co">-- with a JSON-encoded User in the request body</span>
+<span class="co">-- and which responds with that same User value if successful</span>
+<span class="kw">type</span> <span class="dt">UserAPI</span> <span class="fu">=</span> <span class="st">&quot;users&quot;</span> <span class="fu">:&gt;</span> <span class="dt">ReqBody</span> <span class="dt">User</span> <span class="fu">:&gt;</span> <span class="dt">Post</span> <span class="dt">User</span></code></pre></li>
+</ul>
+</div><div id="the-result-webservice-api-combinators-3" class="slide section level2">
+<h1>The result: webservice API combinators (3)</h1>
+<ul>
+<li><p>Declare a standard query string parameter (which are <em>de-facto</em> optional) with <code>QueryParam</code></p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- GET /users/search?q=john</span>
+<span class="co">-- would search for users with &quot;john&quot; in their first or last name</span>
+<span class="kw">type</span> <span class="dt">UserAPI</span> <span class="fu">=</span> <span class="st">&quot;users&quot;</span> <span class="fu">:&gt;</span> <span class="st">&quot;search&quot;</span> <span class="fu">:&gt;</span> <span class="dt">QueryParam</span> <span class="st">&quot;q&quot;</span> <span class="dt">Text</span> <span class="fu">:&gt;</span> <span class="dt">Get</span> [<span class="dt">User</span>]</code></pre></li>
+<li><p>Declare a value-less query string parameter, acting like a <code>Bool</code>, with <code>QueryFlag</code></p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- GET /users to get all the users</span>
+<span class="co">-- GET /users?active to only get the active ones</span>
+<span class="kw">type</span> <span class="dt">UserAPI</span> <span class="fu">=</span> <span class="st">&quot;users&quot;</span> <span class="fu">:&gt;</span> <span class="dt">QueryFlag</span> <span class="st">&quot;active&quot;</span> <span class="fu">:&gt;</span> <span class="dt">Get</span> [<span class="dt">User</span>]</code></pre></li>
+<li><p>Declare a list-like query string parameter, like <code>foo</code> in <code>?foo[]=1&amp;foo[]=2</code>, with <code>QueryParams</code> (notice the final <code>s</code>)</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- GET /users?knows[]=haskell&amp;knows[]=rust</span>
+<span class="co">-- to get all the users who know Haskell and Rust</span>
+<span class="kw">type</span> <span class="dt">UserAPI</span> <span class="fu">=</span> <span class="st">&quot;users&quot;</span> <span class="fu">:&gt;</span> <span class="dt">QueryParams</span> <span class="st">&quot;knows&quot;</span> <span class="dt">Text</span> <span class="fu">:&gt;</span> <span class="dt">Get</span> [<span class="dt">User</span>]</code></pre></li>
+</ul>
+</div><div id="the-result-webservice-api-combinators-4" class="slide section level2">
+<h1>The result: webservice API combinators (4)</h1>
+<ul>
+<li><p>You can plug any <a href="http://hackage.haskell.org/package/wai">WAI</a> app in your API. This is done by using <code>Raw</code> instead of <code>Get a</code> or the likes. For instance, we allow static file serving as a <code>Raw</code> endpoint. If the route leading to the <code>Raw</code> app has static strings in it, it is stripped off the request path sent to the WAI app: the app can just pretend it's running on <code>/</code> while being exposed under <code>/one/very/long/path</code>.</p></li>
+<li><p>Even better: you can write your own combinators! <code>Get</code> from servant is just an empty type:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Get</span> a</code></pre></li>
+<li><p>Everything <code>Get</code> does is actually defined in class instances: one for server-side behavior, one for (haskell) client-side querying functions, one for documentation generation and one for generating querying functions in javascript.</p></li>
+<li><p>This design means you can extend the servant vocabulary by defining your own types and writing instances for the existing classes for them...</p></li>
+<li><p>... or extend servant's reach by defining a new class and then interpreting all the existing combinators in a way that's specific to your use case through instances of your class.</p></li>
+</ul>
+</div>
+<div id="back-to-real-life-writing-an-actual-webservice" class="titleslide slide section level1"><h1>Back to real life: writing an actual webservice</h1></div><div id="concrete-example-managing-books" class="slide section level2">
+<h1>Concrete example: managing books</h1>
+<p>We are going to write a (JSON) webservice to manage books, with 2 endpoints:</p>
+<ul>
+<li><code>GET /books</code> to list all the books we have</li>
+<li><code>POST /books</code> to add a new book, by sending a JSON representation of it in the request body.</li>
+</ul>
+<p>We'll store the data in a PostgreSQL database.</p>
+</div><div id="book-data-type" class="slide section level2">
+<h1>Book data type</h1>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="kw">data</span> <span class="dt">Book</span> <span class="fu">=</span> <span class="dt">Book</span>
+  {<span class="ot"> title  ::</span> <span class="dt">Text</span>
+  ,<span class="ot"> author ::</span> <span class="dt">Text</span>
+  } <span class="kw">deriving</span> <span class="dt">Generic</span>
+
+<span class="co">-- JSON instances</span>
+<span class="kw">instance</span> <span class="dt">FromJSON</span> <span class="dt">Book</span>
+<span class="kw">instance</span> <span class="dt">ToJSON</span> <span class="dt">Book</span>
+
+<span class="co">-- PostgreSQL instances</span>
+<span class="kw">instance</span> <span class="dt">FromRow</span> <span class="dt">Book</span> <span class="kw">where</span>
+  fromRow <span class="fu">=</span> <span class="dt">Book</span> <span class="fu">&lt;$&gt;</span> field <span class="fu">&lt;*&gt;</span> field
+
+<span class="kw">instance</span> <span class="dt">ToRow</span> <span class="dt">Book</span> <span class="kw">where</span>
+  toRow book <span class="fu">=</span> [ toField (title book)
+               , toField (author book)
+               ]</code></pre>
+</div><div id="the-api" class="slide section level2">
+<h1>The API</h1>
+<p>Nothing too fancy here, just using the combinators we saw earlier.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell">             <span class="co">-- we explicitly say we expect a request body,</span>
+             <span class="co">-- of type Book</span>
+<span class="kw">type</span> <span class="dt">BookApi</span> <span class="fu">=</span> <span class="st">&quot;books&quot;</span> <span class="fu">:&gt;</span> <span class="dt">ReqBody</span> <span class="dt">Book</span> <span class="fu">:&gt;</span> <span class="dt">Post</span> <span class="dt">Book</span>  <span class="co">-- POST /books</span>
+          <span class="fu">:&lt;|&gt;</span> <span class="st">&quot;books&quot;</span> <span class="fu">:&gt;</span> <span class="dt">Get</span> [<span class="dt">Book</span>]                 <span class="co">-- GET /books</span></code></pre>
+</div><div id="server-side-handlers" class="slide section level2">
+<h1>Server-side handlers</h1>
+<ul>
+<li><code>POST /books</code>: we insert the book found in the request body in our table</li>
+<li><code>GET /books</code>: we just retrieve all the books from our table</li>
+<li>We glue the handlers with <code>:&lt;|&gt;</code>, just like in the type.</li>
+</ul>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- Let&#39;s stick the API type again here:</span>
+<span class="kw">type</span> <span class="dt">BookApi</span> <span class="fu">=</span> <span class="st">&quot;books&quot;</span> <span class="fu">:&gt;</span> <span class="dt">ReqBody</span> <span class="dt">Book</span> <span class="fu">:&gt;</span> <span class="dt">Post</span> <span class="dt">Book</span>  <span class="co">-- POST /books</span>
+          <span class="fu">:&lt;|&gt;</span> <span class="st">&quot;books&quot;</span> <span class="fu">:&gt;</span> <span class="dt">Get</span> [<span class="dt">Book</span>]                 <span class="co">-- GET /books</span>
+
+<span class="ot">server ::</span> <span class="dt">Connection</span> <span class="ot">-&gt;</span> <span class="dt">Server</span> <span class="dt">BookApi</span>
+server conn <span class="fu">=</span> postBook
+         <span class="fu">:&lt;|&gt;</span> getBooks
+  
+  <span class="kw">where</span> <span class="co">-- the aforementionned &#39;ReqBody&#39; automatically makes this handler</span>
+        <span class="co">-- receive a Book argument</span>
+        postBook book <span class="fu">=</span> liftIO <span class="fu">$</span> execute conn <span class="st">&quot;insert into books values (?, ?)&quot;</span> book <span class="fu">&gt;&gt;</span> return book
+        getBooks      <span class="fu">=</span> liftIO <span class="fu">$</span> query_ conn <span class="st">&quot;select * from books&quot;</span></code></pre>
+<p>Now this is interesting! Let's zoom in on this server function, piece by piece.</p>
+</div><div id="server-side-handlers-2" class="slide section level2">
+<h1>Server-side handlers (2)</h1>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">server ::</span> <span class="dt">Connection</span> <span class="ot">-&gt;</span> <span class="dt">Server</span> <span class="dt">BookApi</span></code></pre>
+<p>Assuming it is given a PostgreSQL connection, our <code>server</code> function returns something of type <code>Server BookApi</code>. <code>Server</code> is a type family in servant which expresses the type that the handlers when glued together should have. It basically makes sure you have an handler for each endpoint and that each handler's type matches the &quot;type&quot; given by the endpoint.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell">server conn <span class="fu">=</span> postBook
+         <span class="fu">:&lt;|&gt;</span> getBooks</code></pre>
+<p>One handler for each endpoint, glued together with <code>:&lt;|&gt;</code>, just like in the API's type.</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- corresponds to: &quot;books&quot; :&gt; ReqBody Book :&gt; Post Book</span>
+<span class="ot">postBook ::</span> <span class="dt">Book</span> <span class="ot">-&gt;</span> <span class="dt">EitherT</span> (<span class="dt">Int</span>, <span class="dt">String</span>) <span class="dt">IO</span> <span class="dt">Book</span>
+postBook book <span class="fu">=</span> liftIO <span class="fu">$</span> execute conn <span class="st">&quot;insert into books values (?, ?)&quot;</span> book <span class="fu">&gt;&gt;</span> return book</code></pre>
+<p>The <code>ReqBody</code> bit of the endpoint gets automatically turned into an argument for the handler. The only thing that's required for this to work is a <code>FromJSON</code> instance for <code>Book</code>. From there, we just run a SQL query and return our <code>book</code> argument, and then use <code>liftIO</code>. This is necessary because server-side handlers live in the <code>EitherT (Int, String) IO</code> monad. The <code>Left</code> case is meant to store failure information, <code>Int</code> for the status and <code>String</code> for the message. This will probably change to a more robust representation soon.</p>
+</div><div id="server-side-handlers-2-1" class="slide section level2">
+<h1>Server-side handlers (2)</h1>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="co">-- corresponds to: &quot;books&quot; :&gt; Get [Book]</span>
+<span class="ot">getBooks ::</span> <span class="dt">EitherT</span> (<span class="dt">Int</span>, <span class="dt">String</span>) <span class="dt">IO</span> [<span class="dt">Book</span>]
+getBooks <span class="fu">=</span> liftIO <span class="fu">$</span> query_ conn <span class="st">&quot;select * from books&quot;</span></code></pre>
+<p><code>getBooks</code> doesn't receive any argument, because there's no <code>ReqBody</code>, <code>Capture</code> or <code>QueryParam</code> in the type of the corresponding endpoint. Had the type been</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="st">&quot;books&quot;</span> <span class="fu">:&gt;</span> <span class="dt">QueryParam</span> <span class="st">&quot;author&quot;</span> <span class="dt">Text</span> <span class="fu">:&gt;</span> <span class="dt">Get</span> [<span class="dt">Book</span>]</code></pre>
+<p>then servant would force the following type for <code>getBooks</code>:</p>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">getBooks ::</span> <span class="dt">Maybe</span> <span class="dt">Text</span> <span class="ot">-&gt;</span> <span class="dt">EitherT</span> (<span class="dt">Int</span>, <span class="dt">String</span>) <span class="dt">IO</span> [<span class="dt">Book</span>]</code></pre>
+<p>where the argument would be <code>Nothing</code> when no <code>author</code> parameter is passed in the query string or <code>Just authorname</code> when there's one.</p>
+</div><div id="running-the-server" class="slide section level2">
+<h1>Running the server</h1>
+<pre class="sourceCode haskell"><code class="sourceCode haskell"><span class="ot">bookApi ::</span> <span class="dt">Proxy</span> <span class="dt">BookApi</span>
+bookApi <span class="fu">=</span> <span class="dt">Proxy</span>
+
+main <span class="fu">=</span> <span class="kw">do</span>
+  conn <span class="ot">&lt;-</span> connectPostgreSQL <span class="st">&quot;host=localhost user=bookstore dbname=bookstore&quot;</span>
+  run <span class="dv">8080</span> (serve bookApi <span class="fu">$</span> server conn)
+
+<span class="co">-- &#39;run&#39; comes from Network.Wai.Handler.Warp</span>
+<span class="co">-- &#39;serve&#39; comes from Servant</span></code></pre>
+</div>
+</body>
+</html>
