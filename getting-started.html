@@ -69,7 +69,7 @@ code > span.er { color: #ff0000; font-weight: bold; }
 </div><div id="aha-moment" class="slide section level2">
 <h1>Aha! moment</h1>
 <ul>
-<li>What if we could express an API as a (admittedly big) type by composing features together, explicitly mentionning URL captures, GET parameters, request bodies and response types?</li>
+<li>What if we could express an API as a (admittedly big) type by composing features together, explicitly mentioning URL captures, GET parameters, request bodies and response types?</li>
 <li>This would in spirit be quite similar to parser combinators à-la <a href="http://hackage.haskell.org/package/parsec">parsec</a>, just at the type level instead -- otherwise we can't exploit the same code for generating a server and the client functions.</li>
 <li>This would make data dependency explicit for each server-side handler</li>
 <li>Combinator-based design usually works well.</li>
@@ -180,8 +180,8 @@ code > span.er { color: #ff0000; font-weight: bold; }
 <span class="ot">server ::</span> <span class="dt">Connection</span> <span class="ot">-&gt;</span> <span class="dt">Server</span> <span class="dt">BookApi</span>
 server conn <span class="fu">=</span> postBook
          <span class="fu">:&lt;|&gt;</span> getBooks
-  
-  <span class="kw">where</span> <span class="co">-- the aforementionned &#39;ReqBody&#39; automatically makes this handler</span>
+
+  <span class="kw">where</span> <span class="co">-- the aforementioned &#39;ReqBody&#39; automatically makes this handler</span>
         <span class="co">-- receive a Book argument</span>
         postBook book <span class="fu">=</span> liftIO <span class="fu">$</span> execute conn <span class="st">&quot;insert into books values (?, ?)&quot;</span> book <span class="fu">&gt;&gt;</span> return book
         getBooks      <span class="fu">=</span> liftIO <span class="fu">$</span> query_ conn <span class="st">&quot;select * from books&quot;</span></code></pre>
